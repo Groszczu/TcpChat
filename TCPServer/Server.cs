@@ -5,31 +5,21 @@ using System.Net.Sockets;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Xml.Serialization;
 using Core;
+using TCPServer.Models;
+using TCPServer.Services;
 
 namespace TCPServer
 {
-    class ClientData
+    public class Server
     {
-        public int Id { get; }
-        public int SessionId { get; }
-        public TcpClient Socket { get; }
-
-        public ClientData(int id, int sessionId, TcpClient socket)
-        {
-            Id = id;
-            SessionId = sessionId;
-            Socket = socket;
-        }
-
-    }
-    
-    class Server
-    {
+        private readonly IPacketFormatter _packetFormatter;
+        private readonly ISessionsRepository _sessionsRepository;
         private readonly object _lock = new object();
-        private readonly TcpListener _server;
-
+        private TcpListener _server;
+    
         private bool _shutDown = false;
 
         private static int _nextClientId = 1;
@@ -37,13 +27,17 @@ namespace TCPServer
 
         private readonly Dictionary<int, ClientData> _clients = new Dictionary<int, ClientData>();
 
-        public Server(string ip, int port)
+        public Server(IPacketFormatter packetFormatter, ISessionsRepository sessionsRepository)
         {
+            _packetFormatter = packetFormatter;
+            _sessionsRepository = sessionsRepository;
+        }
+
+        public async Task RunAsync(string ip, int port)
+        {
+
             _server = new TcpListener(IPAddress.Parse(ip), port);
             _server.Start();
-        }
-        public void Run()
-        {
             while (!_shutDown)
             {
                 Console.WriteLine("[SERVER CONSOLE]");
@@ -54,7 +48,7 @@ namespace TCPServer
                 switch (option)
                 {
                     case "-s":
-                        StartListening();
+                        await HandleConnection();
                         break;
                     case "-d": DisconnectAllClients();
                         break;
@@ -65,12 +59,6 @@ namespace TCPServer
                         break;
                 }
             }
-        }
-        private void StartListening()
-        {
-            var connectionHandler = new Thread(HandleConnection);
-            connectionHandler.Start();
-            if (_shutDown) connectionHandler.Join();
         }
 
         private void TryToQuit()
@@ -94,12 +82,12 @@ namespace TCPServer
 
         }
 
-        private void HandleConnection()
+        private async Task HandleConnection()
         {
             while (!_shutDown)
             {
                 Console.WriteLine("Waiting for connection...");
-                var newClient = _server.AcceptTcpClient();
+                var newClient = await _server.AcceptTcpClientAsync();
                 var newClientId = _nextClientId++;
                 var newSessionId = _nextSessionId++;
                 
@@ -122,15 +110,13 @@ namespace TCPServer
             {
                 var stream = client.Socket.GetStream();
                 var buffer = new byte[1024];
-                var byteCount = stream.Read(buffer, 0, buffer.Length);
+                stream.Read(buffer, 0, buffer.Length);
 
-                var data = Encoding.ASCII.GetString(buffer, 0, byteCount);
-
-                ProcessPacket(client, HeaderBuilder.ConvertStringToPacket(data));
+                ProcessPacket(client, _packetFormatter.Deserialize(buffer));
             }
         }
 
-        private void ProcessPacket(ClientData source, PacketData data)
+        private void ProcessPacket(ClientData source, Packet data)
         {
             switch (data.Operation)
             {
@@ -147,13 +133,11 @@ namespace TCPServer
             }
         }
 
-        private void SendId(ClientData source, PacketData data)
+        private void SendId(ClientData source, Packet data)
         {
             var stream = source.Socket.GetStream();
-            var newPacket = new PacketData(Operation.GetId, Status.Ok, source.SessionId, "dupa");
-            var messageToSend = HeaderBuilder.ConvertPacketToString(newPacket);
-            var buffer = Encoding.ASCII.GetBytes(messageToSend);
-
+            var newPacket = new Packet(Operation.GetId, Status.Ok, source.SessionId, data.Id.ToString());
+            var buffer = _packetFormatter.Serialize(newPacket);
             stream.Write(buffer, 0, buffer.Length);
         }
     }

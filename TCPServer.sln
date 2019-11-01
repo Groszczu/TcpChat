@@ -9,6 +9,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Core", "Core\Core.csproj", 
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TCPClient", "TCPClient\TCPClient.csproj", "{A72D4FD4-42F1-47B3-A8A6-A89FD4837B5E}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UnitTests", "UnitTests\UnitTests.csproj", "{17F94AF1-1337-404E-BE42-2143E1947A0C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,6 +29,10 @@ Global
 		{A72D4FD4-42F1-47B3-A8A6-A89FD4837B5E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A72D4FD4-42F1-47B3-A8A6-A89FD4837B5E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A72D4FD4-42F1-47B3-A8A6-A89FD4837B5E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{17F94AF1-1337-404E-BE42-2143E1947A0C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{17F94AF1-1337-404E-BE42-2143E1947A0C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{17F94AF1-1337-404E-BE42-2143E1947A0C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{17F94AF1-1337-404E-BE42-2143E1947A0C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

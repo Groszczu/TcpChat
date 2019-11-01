@@ -1,35 +1,33 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
-using System.Linq;
+using System.Runtime.Serialization;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading;
-using Core;
 
-namespace TCPServer
+namespace Core
 {
-    public static class HeaderBuilder
+    public class PacketFormatter: IPacketFormatter
     {
-        public static string ConvertPacketToString(PacketData data)
+        public byte[] Serialize(Packet packet)
         {
-            return MakeHeaderPeace("operation", data.Operation.ToString("g"))
-                   + MakeHeaderPeace("status", data.Status.ToString("g"))
-                   + MakeHeaderPeace("id", data.Id.ToString())
-                   + " " + data.Message;
+            var str = MakeHeaderPeace("operation", packet.Operation.ToString("g"))
+                   + MakeHeaderPeace("status", packet.Status.ToString("g"))
+                   + MakeHeaderPeace("id", packet.Id.ToString())
+                   + " " + packet.Message;
+
+            return Encoding.UTF8.GetBytes(str);
         }
 
-        private static string MakeHeaderPeace(string key, string value)
+        public Packet Deserialize(byte[] array)
         {
-            return new string($"{key}-){value}(|");
-        }
-        public static PacketData ConvertStringToPacket(string message)
-        {
+            var message = Encoding.UTF8.GetString(array);
             var regex = new Regex(@"(?<key>\w+)\-\)(?<value>\w+)\(\|");
             if (!regex.IsMatch(message))
                 throw new InvalidDataException("Received message doesn't match the pattern of header");
 
-            var data = new PacketData();
+            var data = new Packet();
             
             foreach (Match match in regex.Matches(message))
             {
@@ -53,26 +51,9 @@ namespace TCPServer
 
             return data;
         }
-    }
-
-    public class PacketData
-    {
-        public Operation Operation { get; set; }
-        public Status Status { get; set; }
-        public int Id { get; set; }
-        public string Message { get; set; }
-
-        public PacketData(Operation operation, Status status, int id, string message)
+        private string MakeHeaderPeace(string key, string value)
         {
-            Operation = operation;
-            Status = status;
-            Id = id;
-            Message = message;
+            return new string($"{key}-){value}(|");
         }
-
-        public PacketData()
-        {
-            
-        }
-    }
+    } 
 }
