@@ -1,11 +1,27 @@
-﻿namespace TCPClient
+﻿using Core;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace TCPClient
 {
-    class Program
+    internal static class Program
     {
-        static void Main(string[] args)
+        private static void Main(string[] args)
         {
-            Client client = new Client("127.0.0.1", 13000);
-            client.Run();
+            // Create service collection and configure our services
+            var services = ConfigureServices();
+            // Generate a provider
+            var serviceProvider = services.BuildServiceProvider();
+
+            // Kick off our actual code
+            serviceProvider.GetService<Client>().Run("127.0.0.1", 13000);
+        }
+
+        private static IServiceCollection ConfigureServices()
+        {
+            IServiceCollection services = new ServiceCollection();
+            services.AddSingleton<IPacketFormatter, PacketFormatter>();
+            services.AddTransient<Client>();
+            return services;
         }
     }
 }

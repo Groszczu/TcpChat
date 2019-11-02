@@ -2,16 +2,14 @@
 
 namespace TCPServer.Models
 {
-    class ClientData
+    public class ClientData
     {
         public int Id { get; }
-        public int SessionId { get; }
         public TcpClient Socket { get; }
 
-        public ClientData(int id, int sessionId, TcpClient socket)
+        public ClientData(int id, TcpClient socket)
         {
             Id = id;
-            SessionId = sessionId;
             Socket = socket;
         }
 

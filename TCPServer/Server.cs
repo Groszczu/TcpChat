@@ -23,7 +23,6 @@ namespace TCPServer
         private bool _shutDown = false;
 
         private static int _nextClientId = 1;
-        private static int _nextSessionId = 100;
 
         private readonly Dictionary<int, ClientData> _clients = new Dictionary<int, ClientData>();
 
@@ -89,10 +88,9 @@ namespace TCPServer
                 Console.WriteLine("Waiting for connection...");
                 var newClient = await _server.AcceptTcpClientAsync();
                 var newClientId = _nextClientId++;
-                var newSessionId = _nextSessionId++;
                 
-                var newClientData = new ClientData(newClientId, newSessionId, newClient);
-                lock (_lock) _clients.Add(newClientId, newClientData);
+                var newClientData = new ClientData(newClientId, newClient);
+                lock (_lock) _sessionsRepository.AddSession(newClientData, Guid.NewGuid());
                
                 Console.WriteLine($"Connected with client {newClientId}");
 
@@ -136,7 +134,7 @@ namespace TCPServer
         private void SendId(ClientData source, Packet data)
         {
             var stream = source.Socket.GetStream();
-            var newPacket = new Packet(Operation.GetId, Status.Ok, source.SessionId, data.Id.ToString());
+            var newPacket = new Packet(Operation.GetId, Status.Ok, _sessionsRepository.GetSessionId(source), data.Id.ToString());
             var buffer = _packetFormatter.Serialize(newPacket);
             stream.Write(buffer, 0, buffer.Length);
         }

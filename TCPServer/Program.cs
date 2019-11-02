@@ -4,9 +4,9 @@ using TCPServer.Services;
 
 namespace TCPServer
 {
-    class Program
+    internal static class Program
     {
-        static void Main(string[] args)
+        private static void Main(string[] args)
         {
             // Create service collection and configure our services
             var services = ConfigureServices();

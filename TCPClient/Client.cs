@@ -15,8 +15,9 @@ namespace TCPClient
     
     public class Client
     {
+        private readonly IPacketFormatter _packetFormatter;
         private TcpClient _client;
-        private int _id;
+        private Guid _sessionId = Guid.Empty;
         private Status _status = Status.Ok;
 
         private IPAddress _ip;
@@ -26,7 +27,6 @@ namespace TCPClient
         private byte[] _buffer = new byte[1024];
 
         private Thread _receivingThread;
-        private Thread _sendingThread;
 
         private DateTime _connectionTime;
         public DateTime ConnectionTime
@@ -40,15 +40,16 @@ namespace TCPClient
                 }
             }
         }
-        public Client(string ip,  int port)
+        public Client(IPacketFormatter packetFormatter)
+        {
+            _packetFormatter = packetFormatter;
+        }
+
+        public void Run(string ip, int port)
         {
             _client = new TcpClient();
             _ip = IPAddress.Parse(ip);
             _port = port;
-        }
-
-        public void Run()
-        {
             while (true)
             {
 
@@ -90,9 +91,8 @@ namespace TCPClient
 
         private void GetSessionId()
         {
-            var packet = new Packet(Operation.GetId, _status, _id, "");
-            var message = HeaderBuilder.ConvertPacketToString(packet);
-            _buffer = Encoding.ASCII.GetBytes(message);
+            var packet = new Packet(Operation.GetId, _status, _sessionId, "");
+            _buffer = _packetFormatter.Serialize(packet);
             _stream.Write(_buffer, 0, _buffer.Length);
         }
 
@@ -109,19 +109,6 @@ namespace TCPClient
 
 
         }
-
-        //private string GenerateOperation(string operationValue, string additionalData)
-        //{
-        //    return MakeHeader("operation", operationValue)
-        //           + MakeHeader("status", _status.ToString("g"))
-        //           + MakeHeader("id", _id.ToString())
-        //           + " " + additionalData;
-        //}
-
-        //private string MakeHeader(string key, string value)
-        //{
-        //    return new string($"{key}-){value}(|");
-        //}
 
         private bool IsConnected()
         {
@@ -198,10 +185,8 @@ namespace TCPClient
                 {
                     return;
                 }
-                var receivedMassage = Encoding.ASCII.GetString(_buffer);
-                var p = HeaderBuilder.ConvertStringToPacket(receivedMassage);
-                Console.WriteLine("Message: " + p.Message);
-                HeaderBuilder.ConvertStringToPacket(receivedMassage);
+                var receivedMassage = _packetFormatter.Deserialize(_buffer);
+                Console.WriteLine("Message: " + receivedMassage);
             }
         }
 

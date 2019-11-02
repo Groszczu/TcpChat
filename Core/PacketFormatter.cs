@@ -23,7 +23,7 @@ namespace Core
         public Packet Deserialize(byte[] array)
         {
             var message = Encoding.UTF8.GetString(array);
-            var regex = new Regex(@"(?<key>\w+)\-\)(?<value>\w+)\(\|");
+            var regex = new Regex(@"(?<key>\w+)-\)(?<value>\w+)\(\|");
             if (!regex.IsMatch(message))
                 throw new InvalidDataException("Received message doesn't match the pattern of header");
 
@@ -39,14 +39,14 @@ namespace Core
                     case "status": Enum.TryParse(match.Groups["value"].Value, out Status status);
                         data.Status = status;
                         break;
-                    case "id": data.Id = int.Parse(match.Groups["value"].Value);
+                    case "id": data.Id = Guid.Parse(match.Groups["value"].Value);
                         break;
                     default:
                         throw new InvalidDataException("Received message doesn't match the pattern of header");
                 }
             }
 
-            regex = new Regex(@"(\w+\-\)\w+\(\|){3}\s*(?<message>.*)");
+            regex = new Regex(@"(\w+-\)(\w|-)+\(\|){3}\s*(?<message>.*)");
             data.Message = !regex.IsMatch(message) ? "Empty message" : regex.Match(message).Groups["message"].Value;
 
             return data;
