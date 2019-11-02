@@ -7,13 +7,15 @@ namespace Core
     {
         public Type PropertyFormatterType { get; }
         public int LengthInBytes { get; }
+        public string Key { get; }
         public int OrderNumber { get; }
 
-        public HeaderProperty(int orderNumber, int lengthInBytes, Type propertyFormatterType)
+        public HeaderProperty(int orderNumber, string key, int lengthInBytes, Type propertyFormatterType)
         {
             PropertyFormatterType = propertyFormatterType;
             LengthInBytes = lengthInBytes;
             OrderNumber = orderNumber;
+            Key = key;
         }
     }
 }
