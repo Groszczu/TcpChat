@@ -14,7 +14,7 @@ namespace TCPServer
             var serviceProvider = services.BuildServiceProvider();
 
             // Kick off our actual code
-            serviceProvider.GetService<Server>().RunAsync("127.0.0.1", 13000).GetAwaiter().GetResult();
+            serviceProvider.GetService<Server>().Run("127.0.0.1", 13000);
         }
 
         private static IServiceCollection ConfigureServices()

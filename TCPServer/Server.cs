@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
@@ -19,12 +20,10 @@ namespace TCPServer
         private readonly ISessionsRepository _sessionsRepository;
         private readonly object _lock = new object();
         private TcpListener _server;
-    
+
         private bool _shutDown = false;
 
         private static int _nextClientId = 1;
-
-        private readonly Dictionary<int, ClientData> _clients = new Dictionary<int, ClientData>();
 
         public Server(IPacketFormatter packetFormatter, ISessionsRepository sessionsRepository)
         {
@@ -32,29 +31,33 @@ namespace TCPServer
             _sessionsRepository = sessionsRepository;
         }
 
-        public async Task RunAsync(string ip, int port)
+        public void Run(string ip, int port)
         {
-
+            Console.WriteLine("[SERVER CONSOLE]");
             _server = new TcpListener(IPAddress.Parse(ip), port);
             _server.Start();
             while (!_shutDown)
             {
-                Console.WriteLine("[SERVER CONSOLE]");
-                Console.WriteLine("Enter '-h' to get help");
-                Console.WriteLine("Enter option:");
+                Console.WriteLine("Enter operation tag:");
 
-                var option = Console.ReadLine();
-                switch (option)
+                var tag = Console.ReadLine();
+                switch (tag)
                 {
                     case "-s":
-                        await HandleConnection();
+                        HandleConnection();
                         break;
-                    case "-d": DisconnectAllClients();
+                    case "-d":
+                        DisconnectAllClients();
                         break;
-                    case "-q": TryToQuit();
+                    case "-q":
+                        TryToQuit();
                         break;
                     case "-h":
                         PrintHelp();
+                        break;
+                    default:
+                        Console.WriteLine("Invalid operation tag");
+                        Console.WriteLine("Enter '-h' to get help");
                         break;
                 }
             }
@@ -62,13 +65,12 @@ namespace TCPServer
 
         private void TryToQuit()
         {
-            _shutDown = true;    
+            _shutDown = true;
             _server.Stop();
         }
 
         private void DisconnectAllClients()
         {
-
         }
 
         private void PrintHelp()
@@ -78,39 +80,37 @@ namespace TCPServer
             Console.WriteLine("-d".PadRight(20) + "disconnect all clients");
             Console.WriteLine("-h".PadRight(20) + "open help menu");
             Console.WriteLine("-q".PadRight(20) + "try to quit program");
-
         }
 
-        private async Task HandleConnection()
+        private void HandleConnection()
         {
             while (!_shutDown)
             {
                 Console.WriteLine("Waiting for connection...");
-                var newClient = await _server.AcceptTcpClientAsync();
+                var newClient = _server.AcceptTcpClient();
                 var newClientId = _nextClientId++;
-                
+
                 var newClientData = new ClientData(newClientId, newClient);
                 lock (_lock) _sessionsRepository.AddSession(newClientData, Guid.NewGuid());
-               
+                
+                
+
                 Console.WriteLine($"Connected with client {newClientId}");
 
-                var receivingThread = new Thread(ReceiveFromClient);
-                receivingThread.Start(newClientId);
+                ReceiveFromClient(newClientData).GetAwaiter().GetResult();
             }
         }
 
-        private void ReceiveFromClient(object o)
+        private async Task ReceiveFromClient(object o)
         {
-            var clientId = (int) o;
-            ClientData client;
-            lock (_lock) client = _clients[clientId];
+            if (!(o is ClientData client))
+                throw new ArgumentException("Passed object is not ClientData type");
+            
             while (true)
             {
                 var stream = client.Socket.GetStream();
-                var buffer = new byte[1024];
-                stream.Read(buffer, 0, buffer.Length);
 
-                ProcessPacket(client, _packetFormatter.Deserialize(buffer));
+                ProcessPacket(client, await _packetFormatter.DeserializeAsync(stream));
             }
         }
 
@@ -118,7 +118,8 @@ namespace TCPServer
         {
             switch (data.Operation)
             {
-                case Operation.GetId: SendId(source, data);
+                case Operation.GetId:
+                    SendSessionIdAndOtherClientsIds(source, data);
                     break;
                 //case Operation.Invite: SendInvite(source);
                 //    break;
@@ -131,12 +132,41 @@ namespace TCPServer
             }
         }
 
-        private void SendId(ClientData source, Packet data)
+        private void SendSessionIdAndOtherClientsIds(ClientData source, Packet data)
         {
-            var stream = source.Socket.GetStream();
-            var newPacket = new Packet(Operation.GetId, Status.Ok, _sessionsRepository.GetSessionId(source), data.Id.ToString());
+            Guid sessionId;
+            lock (_lock) sessionId = _sessionsRepository.GetSessionId(source);
+            
+            var message = new StringBuilder($"Your client ID: {source.Id}, Your session ID: \'{sessionId}\'");
+            AppendOtherClientsIdsToStringBuilder(source, message);
+            
+            var newPacket = new Packet(Operation.GetId, Status.Ok, sessionId, message.ToString());
             var buffer = _packetFormatter.Serialize(newPacket);
+            var stream = source.Socket.GetStream();
             stream.Write(buffer, 0, buffer.Length);
+        }
+
+        private void AppendOtherClientsIdsToStringBuilder(ClientData clientData, StringBuilder stringBuilder)
+        {
+            stringBuilder.Append(" Other available clients IDs: ");
+            var delimiter = string.Empty;
+            lock (_lock)
+            {
+                var otherClients = _sessionsRepository.GetAllClients().Where(client => client.Id != clientData.Id);
+            
+                var thereIsOtherClient = false;
+                foreach (var client in otherClients)
+                {
+                    thereIsOtherClient = true;
+                    stringBuilder.Append(delimiter + client.Id.ToString());
+                    delimiter = ", ";
+                }
+            
+                if (!thereIsOtherClient)
+                {
+                    stringBuilder.Append("There is no other client");
+                }
+            }
         }
     }
 }

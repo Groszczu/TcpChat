@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Text;
+using System.Threading.Tasks;
 using Core;
 using Xunit;
 
@@ -23,13 +24,14 @@ namespace UnitTests
         }
 
         [Fact]
-        public void Packet_Should_Deserialize_Correctly()
+        public async Task Packet_Should_Deserialize_Correctly()
         {
-            var inputString = "operation-)Invite(|status-)Ok(|id-)00000000-0000-0000-0000-000000000000(| 134";
+            var inputString = "operation-)Invite(|status-)Ok(|id-)00000000-0000-0000-0000-000000000000(| 00000000-0000-0000-0000-000000000000";
             var inputArray = Encoding.UTF8.GetBytes(inputString);
-            var packet = new PacketFormatter().Deserialize(inputArray);
+            var memStream = new MemoryStream(inputArray);
+            var packet = await new PacketFormatter().DeserializeAsync(memStream);
 
-            var expected = new Packet(Operation.Invite, Status.Ok, Guid.Empty, "134");
+            var expected = new Packet(Operation.Invite, Status.Ok, Guid.Empty, "00000000-0000-0000-0000-000000000000");
             Assert.Equal(expected.Operation, packet.Operation);
             Assert.Equal(expected.Status, packet.Status);
             Assert.Equal(expected.Id, packet.Id);

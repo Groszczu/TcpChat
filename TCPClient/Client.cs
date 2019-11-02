@@ -7,12 +7,12 @@ using System.Net.Sockets;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
+using System.Threading.Tasks;
 using Core;
 using Microsoft.VisualBasic;
 
 namespace TCPClient
 {
-    
     public class Client
     {
         private readonly IPacketFormatter _packetFormatter;
@@ -24,11 +24,11 @@ namespace TCPClient
         private int _port;
 
         private NetworkStream _stream;
-        private byte[] _buffer = new byte[1024];
 
         private Thread _receivingThread;
 
         private DateTime _connectionTime;
+
         public DateTime ConnectionTime
         {
             get => _connectionTime;
@@ -40,6 +40,7 @@ namespace TCPClient
                 }
             }
         }
+
         public Client(IPacketFormatter packetFormatter)
         {
             _packetFormatter = packetFormatter;
@@ -47,34 +48,33 @@ namespace TCPClient
 
         public void Run(string ip, int port)
         {
+            Console.WriteLine("[CLIENT CONSOLE]");
             _client = new TcpClient();
             _ip = IPAddress.Parse(ip);
             _port = port;
             while (true)
             {
-
-                Console.WriteLine("[CLIENT CONSOLE]");
-                Console.WriteLine("Enter '-h' to get help");
                 Console.WriteLine("Enter option:");
-
-                var option = Console.ReadLine();
-                switch (option)
+                var tag = Console.ReadLine();
+                switch (tag)
                 {
                     case "-cn":
                         TryToConnect();
                         break;
-                    case "-id": GetSessionId();
+                    case "-id":
+                        GetSessionId();
                         break;
-                    case var someVal when new Regex(@"^-i.*$").IsMatch(someVal):
+                    case var someVal when someVal != null && new Regex(@"^-i.*$").IsMatch(someVal):
                         var correctInviteRegex = new Regex(@"^-i\s+(?<id>\d+)$");
-                        if (correctInviteRegex.IsMatch(option))
+                        if (correctInviteRegex.IsMatch(tag))
                         {
-                            InviteUserById(int.Parse(correctInviteRegex.Match(option).Groups["id"].Value));
+                            InviteUserById(int.Parse(correctInviteRegex.Match(tag).Groups["id"].Value));
                         }
                         else
                         {
                             PrintInvalidInviteMessage();
                         }
+
                         break;
                     //case "-a": AcceptInvite();
                     //   break;
@@ -85,15 +85,20 @@ namespace TCPClient
                     case "-h":
                         PrintHelp();
                         break;
+                    default:
+                        Console.WriteLine("Invalid operation tag");
+                        Console.WriteLine("Enter '-h' to get help");
+                        break;
                 }
             }
         }
 
         private void GetSessionId()
         {
-            var packet = new Packet(Operation.GetId, _status, _sessionId, "");
-            _buffer = _packetFormatter.Serialize(packet);
-            _stream.Write(_buffer, 0, _buffer.Length);
+            if (!IsConnected()) return;
+            var packet = new Packet(Operation.GetId, _status, _sessionId, "No message");
+            var buffer = _packetFormatter.Serialize(packet);
+            _stream.Write(buffer, 0, buffer.Length);
         }
 
         private void InviteUserById(int id)
@@ -106,8 +111,6 @@ namespace TCPClient
             }
 
             //Send(MakeHeader());
-
-
         }
 
         private bool IsConnected()
@@ -135,7 +138,7 @@ namespace TCPClient
         }
 
         private void TryToConnect(int maxAttempts = 3)
-        { 
+        {
             var attempt = 0;
             while (!_client.Connected && ++attempt <= maxAttempts)
             {
@@ -155,11 +158,7 @@ namespace TCPClient
             {
                 Console.WriteLine("Connected successfully");
                 _stream = _client.GetStream();
-
-                _receivingThread = new Thread(ReceiveAndPrint);
-                _receivingThread.Start();
-
-                ConnectionTime = DateTime.Now;
+                Task.Run(ReceiveAndPrint).GetAwaiter().GetResult();
             }
             else
             {
@@ -167,26 +166,31 @@ namespace TCPClient
             }
         }
 
-        private void Send(string message)
-        {
-            if (!_client.Connected) return;
-            _buffer = Encoding.ASCII.GetBytes(message);
-            _stream.Write(_buffer, 0, _buffer.Length);
-        }
-
-        private void ReceiveAndPrint()
+        private async Task ReceiveAndPrint()
         {
             while (_client.Connected)
             {
-                _buffer = new byte[1024];
-                var byteCount = _stream.Read(_buffer, 0, _buffer.Length);
+                var receivedPacket = await _packetFormatter.DeserializeAsync(_stream);
+                ProcessPacket(receivedPacket);
+            }
+        }
 
-                if (byteCount == 0)
-                {
-                    return;
-                }
-                var receivedMassage = _packetFormatter.Deserialize(_buffer);
-                Console.WriteLine("Message: " + receivedMassage);
+        private void ProcessPacket(Packet data)
+        {
+            switch (data.Operation)
+            {
+                case Operation.GetId:
+                    _sessionId = data.Id;
+                    Console.WriteLine(data.Message);
+                    break;
+                //case Operation.Invite: SendInvite(source);
+                //    break;
+                //case Operation.AcceptInvite: AcceptInvite(source);
+                //    break;
+                //case Operation.Send: SendMessage(source, data.Message);
+                //    break;
+                //case Operation.Disconnect: Disconnect(source) ;
+                //    break;
             }
         }
 

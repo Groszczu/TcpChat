@@ -5,6 +5,8 @@ namespace TCPServer.Models
     public class ClientData
     {
         public int Id { get; }
+        
+        public string Nick { get; }
         public TcpClient Socket { get; }
 
         public ClientData(int id, TcpClient socket)
@@ -12,6 +14,5 @@ namespace TCPServer.Models
             Id = id;
             Socket = socket;
         }
-
     }
 }
