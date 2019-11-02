@@ -158,7 +158,12 @@ namespace TCPClient
             {
                 Console.WriteLine("Connected successfully");
                 _stream = _client.GetStream();
-                Task.Run(ReceiveAndPrint).GetAwaiter().GetResult();
+
+                new Thread(() =>
+                {
+                    Thread.CurrentThread.IsBackground = true; 
+                    ReceiveAndPrint().GetAwaiter().GetResult();
+                }).Start();
             }
             else
             {

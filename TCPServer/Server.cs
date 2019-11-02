@@ -110,7 +110,8 @@ namespace TCPServer
             {
                 var stream = client.Socket.GetStream();
 
-                ProcessPacket(client, await _packetFormatter.DeserializeAsync(stream));
+                var receivedPacket = await _packetFormatter.DeserializeAsync(stream);
+                ProcessPacket(client, receivedPacket);
             }
         }
 
