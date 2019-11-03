@@ -73,16 +73,15 @@ namespace TCPClient
                         var correctInviteRegex = new Regex(@"^-i\s+(?<id>\d+)$");
                         if (correctInviteRegex.IsMatch(tag))
                         {
-                            _reset.WaitOne();                            
                             var destinationId = int.Parse(correctInviteRegex.Match(tag).Groups["id"].Value);
                             _commandHandler.Handle(new ClientInvite(destinationId, _sessionId, _stream,
                                 _packetFormatter));
+                            Console.WriteLine($"Invited client with ID: {destinationId} to your session");
                         }
                         else
                         {
                             PrintInvalidInviteMessage();
                         }
-
                         break;
                     //case "-a": AcceptInvite();
                     //   break;
