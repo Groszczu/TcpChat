@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
@@ -34,6 +35,11 @@ namespace TCPServer.Services
         public Dictionary<ClientData, Guid>.KeyCollection GetAllClients()
         {
             return _sessions.Keys;
+        }
+
+        public ClientData GetClientById(int id)
+        {
+            return _sessions.Keys.FirstOrDefault(client => client.Id == id);
         }
     }
 }

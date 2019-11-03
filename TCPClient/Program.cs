@@ -20,6 +20,7 @@ namespace TCPClient
         {
             IServiceCollection services = new ServiceCollection();
             services.AddSingleton<IPacketFormatter, PacketFormatter>();
+            services.AddSingleton<ICommandHandler, OperationsHandler>();
             services.AddTransient<Client>();
             return services;
         }

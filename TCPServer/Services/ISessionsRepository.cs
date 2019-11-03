@@ -12,5 +12,6 @@ namespace TCPServer.Services
         void AddSession(ClientData clientData, Guid sessionId);
         Guid GetSessionId(ClientData clientData);
         Dictionary<ClientData, Guid>.KeyCollection GetAllClients();
+        ClientData GetClientById(int id);
     }
 }

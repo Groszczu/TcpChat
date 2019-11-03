@@ -6,14 +6,14 @@ namespace Core
     public class HeaderProperty : Attribute
     {
         public Type PropertyFormatterType { get; }
-        public int LengthInBytes { get; }
+        public int MaximumLengthInBytes { get; }
         public string Key { get; }
         public int OrderNumber { get; }
 
-        public HeaderProperty(int orderNumber, string key, int lengthInBytes, Type propertyFormatterType)
+        public HeaderProperty(int orderNumber, string key, int maximumLengthInBytes, Type propertyFormatterType)
         {
             PropertyFormatterType = propertyFormatterType;
-            LengthInBytes = lengthInBytes;
+            MaximumLengthInBytes = maximumLengthInBytes;
             OrderNumber = orderNumber;
             Key = key;
         }

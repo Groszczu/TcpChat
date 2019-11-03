@@ -10,12 +10,14 @@ using System.Threading;
 using System.Threading.Tasks;
 using Core;
 using Microsoft.VisualBasic;
+using TCPClient.Models.Commands;
 
 namespace TCPClient
 {
     public class Client
     {
         private readonly IPacketFormatter _packetFormatter;
+        private readonly ICommandHandler _commandHandler;
         private TcpClient _client;
         private Guid _sessionId = Guid.Empty;
         private Status _status = Status.Ok;
@@ -26,6 +28,7 @@ namespace TCPClient
         private NetworkStream _stream;
 
         private Thread _receivingThread;
+        private readonly ManualResetEvent _reset = new ManualResetEvent(false);
 
         private DateTime _connectionTime;
 
@@ -41,9 +44,10 @@ namespace TCPClient
             }
         }
 
-        public Client(IPacketFormatter packetFormatter)
+        public Client(IPacketFormatter packetFormatter, ICommandHandler commandHandler)
         {
             _packetFormatter = packetFormatter;
+            _commandHandler = commandHandler;
         }
 
         public void Run(string ip, int port)
@@ -54,7 +58,7 @@ namespace TCPClient
             _port = port;
             while (true)
             {
-                Console.WriteLine("Enter option:");
+                Console.WriteLine("\nEnter operation tag:");
                 var tag = Console.ReadLine();
                 switch (tag)
                 {
@@ -62,13 +66,17 @@ namespace TCPClient
                         TryToConnect();
                         break;
                     case "-id":
-                        GetSessionId();
+                        _commandHandler.Handle(new ClientGetId(_sessionId, _stream, _packetFormatter));
+                        _reset.WaitOne();
                         break;
-                    case var someVal when someVal != null && new Regex(@"^-i.*$").IsMatch(someVal):
+                    case var someVal when someVal != null && new Regex(@"^-i\s+.*$").IsMatch(someVal):
                         var correctInviteRegex = new Regex(@"^-i\s+(?<id>\d+)$");
                         if (correctInviteRegex.IsMatch(tag))
                         {
-                            InviteUserById(int.Parse(correctInviteRegex.Match(tag).Groups["id"].Value));
+                            _reset.WaitOne();                            
+                            var destinationId = int.Parse(correctInviteRegex.Match(tag).Groups["id"].Value);
+                            _commandHandler.Handle(new ClientInvite(destinationId, _sessionId, _stream,
+                                _packetFormatter));
                         }
                         else
                         {
@@ -80,8 +88,9 @@ namespace TCPClient
                     //   break;
                     //case "-c": CloseSession();
                     //   break;
-                    //  case "-q": TryToQuit();
-                    //   break;
+                    case "-q":
+                        TryToQuit();
+                        break;
                     case "-h":
                         PrintHelp();
                         break;
@@ -93,12 +102,11 @@ namespace TCPClient
             }
         }
 
-        private void GetSessionId()
+        private void TryToQuit()
         {
-            if (!IsConnected()) return;
-            var packet = new Packet(Operation.GetId, _status, _sessionId, "No message");
-            var buffer = _packetFormatter.Serialize(packet);
-            _stream.Write(buffer, 0, buffer.Length);
+            if (IsConnected())
+                Disconnect();
+            Environment.Exit(0);
         }
 
         private void InviteUserById(int id)
@@ -153,7 +161,6 @@ namespace TCPClient
                 }
             }
 
-            Console.Clear();
             if (_client.Connected)
             {
                 Console.WriteLine("Connected successfully");
@@ -161,7 +168,7 @@ namespace TCPClient
 
                 new Thread(() =>
                 {
-                    Thread.CurrentThread.IsBackground = true; 
+                    Thread.CurrentThread.IsBackground = true;
                     ReceiveAndPrint().GetAwaiter().GetResult();
                 }).Start();
             }
@@ -188,8 +195,9 @@ namespace TCPClient
                     _sessionId = data.Id;
                     Console.WriteLine(data.Message);
                     break;
-                //case Operation.Invite: SendInvite(source);
-                //    break;
+                case Operation.Invite:
+                    PrintInvite(data);
+                    break;
                 //case Operation.AcceptInvite: AcceptInvite(source);
                 //    break;
                 //case Operation.Send: SendMessage(source, data.Message);
@@ -197,13 +205,20 @@ namespace TCPClient
                 //case Operation.Disconnect: Disconnect(source) ;
                 //    break;
             }
+
+            _reset.Set();
+        }
+
+        private void PrintInvite(Packet packet)
+        {
+            Console.WriteLine(packet.Message);
         }
 
         private void Disconnect()
         {
             Console.WriteLine("Disconnecting from server...");
             _client.Client.Shutdown(SocketShutdown.Send);
-            _receivingThread.Join();
+            _receivingThread?.Join();
             _stream.Close();
             _client.Close();
             Console.WriteLine("Disconnected from server");

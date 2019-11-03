@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using System.Xml.Serialization;
 using Core;
 using TCPServer.Models;
+using TCPServer.Models.Commands;
 using TCPServer.Services;
 
 namespace TCPServer
@@ -18,6 +19,7 @@ namespace TCPServer
     {
         private readonly IPacketFormatter _packetFormatter;
         private readonly ISessionsRepository _sessionsRepository;
+        private ICommandHandler _commandHandler; 
         private readonly object _lock = new object();
         private TcpListener _server;
 
@@ -25,10 +27,11 @@ namespace TCPServer
 
         private static int _nextClientId = 1;
 
-        public Server(IPacketFormatter packetFormatter, ISessionsRepository sessionsRepository)
+        public Server(IPacketFormatter packetFormatter, ISessionsRepository sessionsRepository, ICommandHandler commandHandler)
         {
             _packetFormatter = packetFormatter;
             _sessionsRepository = sessionsRepository;
+            _commandHandler = commandHandler;
         }
 
         public void Run(string ip, int port)
@@ -38,7 +41,7 @@ namespace TCPServer
             _server.Start();
             while (!_shutDown)
             {
-                Console.WriteLine("Enter operation tag:");
+                Console.WriteLine("\nEnter operation tag:");
 
                 var tag = Console.ReadLine();
                 switch (tag)
@@ -96,8 +99,11 @@ namespace TCPServer
                 
 
                 Console.WriteLine($"Connected with client {newClientId}");
-
-                ReceiveFromClient(newClientData).GetAwaiter().GetResult();
+                new Thread(() =>
+                {
+                    Thread.CurrentThread.IsBackground = true; 
+                    ReceiveFromClient(newClientData).GetAwaiter().GetResult();
+                }).Start();
             }
         }
 
@@ -117,13 +123,21 @@ namespace TCPServer
 
         private void ProcessPacket(ClientData source, Packet data)
         {
+            ICommand command = null;
             switch (data.Operation)
             {
                 case Operation.GetId:
-                    SendSessionIdAndOtherClientsIds(source, data);
+                    lock (_lock)
+                    {
+                        command = new GetId(source, _sessionsRepository, _packetFormatter);
+                    }
                     break;
-                //case Operation.Invite: SendInvite(source);
-                //    break;
+                case Operation.Invite: 
+                    lock (_lock)
+                    {
+                        command = new Invite(source, data.DestinationId, _sessionsRepository, _packetFormatter);
+                    }
+                    break;
                 //case Operation.AcceptInvite: AcceptInvite(source);
                 //    break;
                 //case Operation.Send: SendMessage(source, data.Message);
@@ -131,6 +145,8 @@ namespace TCPServer
                 //case Operation.Disconnect: Disconnect(source) ;
                 //    break;
             }
+            if (command != null)
+                _commandHandler.Handle(command);
         }
 
         private void SendSessionIdAndOtherClientsIds(ClientData source, Packet data)

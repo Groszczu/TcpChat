@@ -1,5 +1,6 @@
 ﻿using Core;
 using Microsoft.Extensions.DependencyInjection;
+using TCPServer.Models.Commands;
 using TCPServer.Services;
 
 namespace TCPServer
@@ -23,6 +24,7 @@ namespace TCPServer
             // IMPORTANT! Register our application entry point
             services.AddSingleton<IPacketFormatter, PacketFormatter>();
             services.AddSingleton<ISessionsRepository, SessionsRepository>();
+            services.AddSingleton<ICommandHandler, OperationsHandler>();
             services.AddTransient<Server>();
             return services;
         }
