@@ -5,7 +5,7 @@ using TCPServer.Services;
 
 namespace TCPServer.Models.Commands
 {
-    public class Invite : ICommand
+    public class ServerInvite : ICommand
     {
         public Packet Packet { get; set; }
 
@@ -18,7 +18,7 @@ namespace TCPServer.Models.Commands
         private readonly Guid _destinationSessionId;
         private readonly Guid _sourceSessionId;
 
-        public Invite(ClientData source, int destinationId, ISessionsRepository sessionsRepository,
+        public ServerInvite(ClientData source, int destinationId, ISessionsRepository sessionsRepository,
             IPacketFormatter packetFormatter)
         {
             _source = source;
@@ -44,6 +44,9 @@ namespace TCPServer.Models.Commands
         {
             if (_destinationId == _source.Id)
                 throw new InvalidOperationException("User cannot invite himself to session");
+            
+            if (_destinationSessionId == _sourceSessionId)
+                throw new InvalidOperationException("Invited user is in your session");
 
             if (_destination == null)
                 throw new InvalidOperationException($"There is no user with ID: {_destinationId}");

@@ -6,7 +6,7 @@ using TCPServer.Services;
 
 namespace TCPServer.Models.Commands
 {
-    public class GetId : ICommand
+    public class ServerGetId : ICommand
     {
         public Packet Packet { get; set; }
 
@@ -15,7 +15,7 @@ namespace TCPServer.Models.Commands
         private readonly IPacketFormatter _packetFormatter;
         private readonly Guid _sessionId;
 
-        public GetId(ClientData client, ISessionsRepository sessionsRepository, IPacketFormatter packetFormatter)
+        public ServerGetId(ClientData client, ISessionsRepository sessionsRepository, IPacketFormatter packetFormatter)
         {
             _client = client;
             _sessionsRepository = sessionsRepository;

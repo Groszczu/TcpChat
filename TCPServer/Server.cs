@@ -129,13 +129,13 @@ namespace TCPServer
                 case Operation.GetId:
                     lock (_lock)
                     {
-                        command = new GetId(source, _sessionsRepository, _packetFormatter);
+                        command = new ServerGetId(source, _sessionsRepository, _packetFormatter);
                     }
                     break;
                 case Operation.Invite: 
                     lock (_lock)
                     {
-                        command = new Invite(source, data.DestinationId, _sessionsRepository, _packetFormatter);
+                        command = new ServerInvite(source, data.DestinationId, _sessionsRepository, _packetFormatter);
                     }
                     break;
                 //case Operation.AcceptInvite: AcceptInvite(source);
