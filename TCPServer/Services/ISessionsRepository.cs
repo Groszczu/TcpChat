@@ -9,9 +9,10 @@ namespace TCPServer.Services
 {
     public interface ISessionsRepository
     {
-        void AddSession(ClientData clientData, Guid sessionId);
+        void AddSessionRecord(ClientData clientData, Guid sessionId);
         Guid GetSessionId(ClientData clientData);
         Dictionary<ClientData, Guid>.KeyCollection GetAllClients();
         ClientData GetClientById(int id);
+        void UpdateClientSessionId(ClientData clientData, Guid newSessionId);
     }
 }

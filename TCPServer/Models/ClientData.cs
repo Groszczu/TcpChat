@@ -31,6 +31,11 @@ namespace TCPServer.Models
             _pendingInvites.Remove(inviterId);
         }
 
+        public bool GotInviteFrom(int inviterId)
+        {
+            return _pendingInvites.ContainsKey(inviterId);
+        }
+
         public void SendTo(byte[] bytes)
         {
             var stream = Socket.GetStream();

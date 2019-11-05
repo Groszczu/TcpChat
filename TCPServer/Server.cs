@@ -19,7 +19,7 @@ namespace TCPServer
     {
         private readonly IPacketFormatter _packetFormatter;
         private readonly ISessionsRepository _sessionsRepository;
-        private readonly ICommandHandler _commandHandler; 
+        private readonly ICommandHandler _commandHandler;
         private readonly object _lock = new object();
         private TcpListener _server;
 
@@ -27,7 +27,8 @@ namespace TCPServer
 
         private static int _nextClientId = 1;
 
-        public Server(IPacketFormatter packetFormatter, ISessionsRepository sessionsRepository, ICommandHandler commandHandler)
+        public Server(IPacketFormatter packetFormatter, ISessionsRepository sessionsRepository,
+            ICommandHandler commandHandler)
         {
             _packetFormatter = packetFormatter;
             _sessionsRepository = sessionsRepository;
@@ -94,14 +95,13 @@ namespace TCPServer
                 var newClientId = _nextClientId++;
 
                 var newClientData = new ClientData(newClientId, newClient);
-                lock (_lock) _sessionsRepository.AddSession(newClientData, Guid.NewGuid());
-                
-                
+                lock (_lock) _sessionsRepository.AddSessionRecord(newClientData, Guid.NewGuid());
+
 
                 Console.WriteLine($"Connected with client {newClientId}");
                 new Thread(() =>
                 {
-                    Thread.CurrentThread.IsBackground = true; 
+                    Thread.CurrentThread.IsBackground = true;
                     ReceiveFromClient(newClientData).GetAwaiter().GetResult();
                 }).Start();
             }
@@ -111,7 +111,7 @@ namespace TCPServer
         {
             if (!(o is ClientData client))
                 throw new ArgumentException("Passed object is not ClientData type");
-            
+
             while (true)
             {
                 var stream = client.Socket.GetStream();
@@ -127,29 +127,102 @@ namespace TCPServer
             Guid sourceSessionId;
             lock (_lock) sourceSessionId = _sessionsRepository.GetSessionId(source);
             var errorPacket = new Packet(data.Operation.Value, Status.Unauthorized, sourceSessionId);
-            switch (data.Operation.Value)
+            try
+            {
+                switch (data.Operation.Value)
+                {
+                    case Operation.GetId:
+                        lock (_lock) command = new ServerGetId(source, _sessionsRepository, _packetFormatter);
+                        break;
+                    case Operation.Invite:
+                        lock (_lock)
+                        {
+                            switch (data.Status.Value)
+                            {
+                                case Status.Ok:
+                                    command = new ServerInvite(source, data.DestinationId.Value,
+                                        _sessionsRepository,
+                                        _packetFormatter);
+                                    break;
+                                case Status.Accept:
+                                    command = new ServerAcceptInvite(source, data.DestinationId.Value,
+                                        _sessionsRepository, _packetFormatter);
+                                    break;
+                                case Status.Decline:
+                                    break;
+                            }
+                        }
+
+                        break;
+                    //case Operation.AcceptInvite: AcceptInvite(source);
+                    //    break;
+                    //case Operation.Send: SendMessage(source, data.Message);
+                    //    break;
+                    case Operation.Disconnect:
+                        lock (_lock)
+                        {
+                            //command = new ServerDisconnect(source)
+                        }
+
+                        break;
+                }
+            }
+            catch (InvalidOperationException exception)
+            {
+                Console.WriteLine(exception.Message);
+                command = null;
+                errorPacket.SetMessage(exception.Message);
+            }
+
+            if (errorPacket.Message.IsSet)
+            {
+                source.SendTo(_packetFormatter.Serialize(errorPacket));
+            }
+            else if (command != null)
+            {
+                _commandHandler.Handle(command);
+            }
+        }
+
+        private ICommand DetermineCommand(ClientData source, Packet packet)
+        {
+            ICommand command = null;
+            Guid sourceSessionId;
+            lock (_lock) sourceSessionId = _sessionsRepository.GetSessionId(source);
+            var errorPacket = new Packet(packet.Operation.Value, Status.Unauthorized, sourceSessionId);
+            switch (packet.Operation.Value)
             {
                 case Operation.GetId:
+                {
+                    try
                     {
-                        try
-                        {
-                            lock (_lock) command = new ServerGetId(source, _sessionsRepository, _packetFormatter);
-                        }
-                        catch (InvalidOperationException exception)
-                        {
-                            Console.WriteLine(exception.Message);
-                            command = null;
-                            errorPacket.SetMessage(exception.Message);
-                        }
+                        lock (_lock) command = new ServerGetId(source, _sessionsRepository, _packetFormatter);
                     }
+                    catch (InvalidOperationException exception)
+                    {
+                        Console.WriteLine(exception.Message);
+                        errorPacket.SetMessage(exception.Message);
+                    }
+                }
                     break;
-                case Operation.Invite: 
+                case Operation.Invite:
                     lock (_lock)
                     {
                         try
                         {
-                            command = new ServerInvite(source, data.DestinationId.Value, _sessionsRepository,
-                                _packetFormatter);
+                            switch (packet.Status.Value)
+                            {
+                                case Status.Ok:
+                                    command = new ServerInvite(source, packet.DestinationId.Value, _sessionsRepository,
+                                        _packetFormatter);
+                                    break;
+                                case Status.Accept:
+                                    command = new ServerAcceptInvite(source, packet.DestinationId.Value,
+                                        _sessionsRepository, _packetFormatter);
+                                    break;
+                                case Status.Decline:
+                                    break;
+                            }
                         }
                         catch (InvalidOperationException exception)
                         {
@@ -158,6 +231,7 @@ namespace TCPServer
                             errorPacket.SetMessage(exception.Message);
                         }
                     }
+
                     break;
                 //case Operation.AcceptInvite: AcceptInvite(source);
                 //    break;
@@ -168,16 +242,11 @@ namespace TCPServer
                     {
                         //command = new ServerDisconnect(source)
                     }
+
                     break;
             }
-            if (!errorPacket.Message.IsSet && command != null)
-            {
-                _commandHandler.Handle(command);
-            }
-            else
-            {
-                source.SendTo(_packetFormatter.Serialize(errorPacket));
-            }
+
+            return command;
         }
     }
 }

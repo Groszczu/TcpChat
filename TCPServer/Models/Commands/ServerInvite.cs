@@ -11,9 +11,8 @@ namespace TCPServer.Models.Commands
         public Packet Packet { get; set; }
 
         private readonly ClientData _source;
-        private readonly int _destinationId;
-        private readonly ClientData _destination;
-
+        private ClientData _destination;
+        private readonly ISessionsRepository _sessionsRepository;
         private readonly IPacketFormatter _packetFormatter;
         private readonly Guid _destinationSessionId;
         private readonly Guid _sourceSessionId;
@@ -22,24 +21,29 @@ namespace TCPServer.Models.Commands
             IPacketFormatter packetFormatter)
         {
             _source = source;
-            _destinationId = destinationId;
+            _sessionsRepository = sessionsRepository;
             _packetFormatter = packetFormatter;
 
-            _destination = sessionsRepository.GetClientById(destinationId);
-            ValidateClientId();
+            ValidateClientIdAndInitialize(destinationId);
             _destinationSessionId = sessionsRepository.GetSessionId(_destination);
             _sourceSessionId = sessionsRepository.GetSessionId(_source);
             ValidateInvite();
 
             Packet = new Packet(Operation.Invite, Status.Ok, _destinationSessionId)
-                .SetMessage(GenerateMessage())
-                .SetDestinationId(_destinationId);
+                .SetDestinationId(_destination.Id)
+                .SetMessage(GenerateMessage());
         }
 
-        private void ValidateClientId()
+        private void ValidateClientIdAndInitialize(int destinationId)
         {
-            if (_destination == null)
-                  throw new InvalidOperationException($"There is no user with ID: {_destinationId}");
+            try
+            {
+                _destination = _sessionsRepository.GetClientById(destinationId);
+            }
+            catch (InvalidOperationException)
+            {
+                throw new InvalidOperationException($"There is no user with ID: {destinationId}");
+            }
         }
 
         public void Execute()
@@ -51,19 +55,17 @@ namespace TCPServer.Models.Commands
 
         private void ValidateInvite()
         {
-            if (_destinationId == _source.Id)
+            if (_destination.Id == _source.Id)
                 throw new InvalidOperationException("User cannot invite himself to session");
 
             if (_destinationSessionId == _sourceSessionId)
-                throw new InvalidOperationException("Invited user is in your session");
-
-            
+                throw new InvalidOperationException("User you are inviting is already in your session");
         }
 
         private string GenerateMessage()
         {
             var baseMessage =
-                $"You (client {_destinationId}) got invite from client {_source.Id} to session {_sourceSessionId}";
+                $"You (client {_destination.Id}) got invite from client {_source.Id} to session {_sourceSessionId}";
             return baseMessage;
         }
     }

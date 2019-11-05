@@ -11,7 +11,7 @@ namespace TCPServer.Services
     public class SessionsRepository: ISessionsRepository
     {
         private readonly Dictionary<ClientData, Guid> _sessions = new Dictionary<ClientData, Guid>();
-        public void AddSession(ClientData clientData, Guid sessionId)
+        public void AddSessionRecord(ClientData clientData, Guid sessionId)
         {
             try
             {
@@ -22,6 +22,13 @@ namespace TCPServer.Services
             {
                 Console.WriteLine("Client you are trying to add is already in the session repository");
             }
+        }
+
+        public void UpdateClientSessionId(ClientData clientData, Guid newSessionId)
+        {
+            if (!_sessions.ContainsKey(clientData))
+                throw new ArgumentException("Cannot update session ID of client that is not in the sessions repository");
+            _sessions[clientData] = newSessionId;
         }
 
         public Guid GetSessionId(ClientData clientData)
@@ -39,7 +46,11 @@ namespace TCPServer.Services
 
         public ClientData GetClientById(int id)
         {
-            return _sessions.Keys.FirstOrDefault(client => client.Id == id);
+            var searched = _sessions.Keys.FirstOrDefault(client => client.Id == id);
+            if (searched == null)
+                throw new InvalidOperationException("Required client is not in the sessions repository");
+
+            return searched;
         }
     }
 }

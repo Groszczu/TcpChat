@@ -81,11 +81,22 @@ namespace TCPClient
                         }
                         else
                         {
-                            PrintInvalidInviteMessage();
+                            InvalidInputMessage("Invite", "-i [id]");
                         }
                         break;
-                    //case "-a": AcceptInvite();
-                    //   break;
+                    case var someVal when someVal != null && new Regex(@"^-a\s+.*$").IsMatch(someVal):
+                        var correctAcceptInviteRegex = new Regex(@"^-a\s+(?<id>\d+)$");
+                        if (tag != null && correctAcceptInviteRegex.IsMatch(tag))
+                        {
+                            var inviterId = int.Parse(correctAcceptInviteRegex.Match(tag).Groups["id"].Value);
+                            _commandHandler.Handle(new ClientAcceptInvite(inviterId, _sessionId, _byteSender,
+                                _packetFormatter));
+                        }
+                        else
+                        {
+                            InvalidInputMessage("Accept invite", "-a [id]");
+                        }
+                        break;
                     //case "-c": CloseSession();
                     //   break;
                     case "-q":
@@ -102,6 +113,13 @@ namespace TCPClient
             }
         }
 
+        private void InvalidInputMessage(string operationName, string pattern)
+        {
+            Console.WriteLine("Invalid input");
+            Console.WriteLine($"{operationName} operation should be organized like shown below:");
+            Console.WriteLine(pattern);
+        }
+
         private void TryToQuit()
         {
             if (IsConnected())
@@ -112,13 +130,6 @@ namespace TCPClient
         private bool IsConnected()
         {
             return _client.Connected;
-        }
-
-        private void PrintInvalidInviteMessage()
-        {
-            Console.WriteLine("Invalid input");
-            Console.WriteLine("Invite option should be organized like shown below:");
-            Console.WriteLine("-i [id]");
         }
 
         private void PrintHelp()
@@ -160,7 +171,7 @@ namespace TCPClient
                     Thread.CurrentThread.IsBackground = true;
                     ReceiveAndPrint().GetAwaiter().GetResult();
                 });
-                
+
                 _receivingThread.Start();
             }
             else
@@ -189,7 +200,7 @@ namespace TCPClient
                     _sessionId = data.Id.Value;
                     break;
                 case Operation.Invite:
-                    
+
                     break;
                 //case Operation.AcceptInvite: AcceptInvite(source);
                 //    break;
