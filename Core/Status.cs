@@ -2,7 +2,9 @@
 {
     public enum Status
     {
-        Ok = 0,
-        Unauthorized = 1
+        Ok,
+        Accept,
+        Decline,
+        Unauthorized
     }
 }

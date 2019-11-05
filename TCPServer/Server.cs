@@ -19,7 +19,7 @@ namespace TCPServer
     {
         private readonly IPacketFormatter _packetFormatter;
         private readonly ISessionsRepository _sessionsRepository;
-        private ICommandHandler _commandHandler; 
+        private readonly ICommandHandler _commandHandler; 
         private readonly object _lock = new object();
         private TcpListener _server;
 
@@ -124,65 +124,59 @@ namespace TCPServer
         private void ProcessPacket(ClientData source, Packet data)
         {
             ICommand command = null;
-            switch (data.Operation)
+            Guid sourceSessionId;
+            lock (_lock) sourceSessionId = _sessionsRepository.GetSessionId(source);
+            var errorPacket = new Packet(data.Operation.Value, Status.Unauthorized, sourceSessionId);
+            switch (data.Operation.Value)
             {
                 case Operation.GetId:
-                    lock (_lock)
                     {
-                        command = new ServerGetId(source, _sessionsRepository, _packetFormatter);
+                        try
+                        {
+                            lock (_lock) command = new ServerGetId(source, _sessionsRepository, _packetFormatter);
+                        }
+                        catch (InvalidOperationException exception)
+                        {
+                            Console.WriteLine(exception.Message);
+                            command = null;
+                            errorPacket.SetMessage(exception.Message);
+                        }
                     }
                     break;
                 case Operation.Invite: 
                     lock (_lock)
                     {
-                        command = new ServerInvite(source, data.DestinationId, _sessionsRepository, _packetFormatter);
+                        try
+                        {
+                            command = new ServerInvite(source, data.DestinationId.Value, _sessionsRepository,
+                                _packetFormatter);
+                        }
+                        catch (InvalidOperationException exception)
+                        {
+                            Console.WriteLine(exception.Message);
+                            command = null;
+                            errorPacket.SetMessage(exception.Message);
+                        }
                     }
                     break;
                 //case Operation.AcceptInvite: AcceptInvite(source);
                 //    break;
                 //case Operation.Send: SendMessage(source, data.Message);
                 //    break;
-                //case Operation.Disconnect: Disconnect(source) ;
-                //    break;
+                case Operation.Disconnect:
+                    lock (_lock)
+                    {
+                        //command = new ServerDisconnect(source)
+                    }
+                    break;
             }
-            if (command != null)
-                _commandHandler.Handle(command);
-        }
-
-        private void SendSessionIdAndOtherClientsIds(ClientData source, Packet data)
-        {
-            Guid sessionId;
-            lock (_lock) sessionId = _sessionsRepository.GetSessionId(source);
-            
-            var message = new StringBuilder($"Your client ID: {source.Id}, Your session ID: \'{sessionId}\'");
-            AppendOtherClientsIdsToStringBuilder(source, message);
-            
-            var newPacket = new Packet(Operation.GetId, Status.Ok, sessionId, message.ToString());
-            var buffer = _packetFormatter.Serialize(newPacket);
-            var stream = source.Socket.GetStream();
-            stream.Write(buffer, 0, buffer.Length);
-        }
-
-        private void AppendOtherClientsIdsToStringBuilder(ClientData clientData, StringBuilder stringBuilder)
-        {
-            stringBuilder.Append(" Other available clients IDs: ");
-            var delimiter = string.Empty;
-            lock (_lock)
+            if (!errorPacket.Message.IsSet && command != null)
             {
-                var otherClients = _sessionsRepository.GetAllClients().Where(client => client.Id != clientData.Id);
-            
-                var thereIsOtherClient = false;
-                foreach (var client in otherClients)
-                {
-                    thereIsOtherClient = true;
-                    stringBuilder.Append(delimiter + client.Id.ToString());
-                    delimiter = ", ";
-                }
-            
-                if (!thereIsOtherClient)
-                {
-                    stringBuilder.Append("There is no other client");
-                }
+                _commandHandler.Handle(command);
+            }
+            else
+            {
+                source.SendTo(_packetFormatter.Serialize(errorPacket));
             }
         }
     }

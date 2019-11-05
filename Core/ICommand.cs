@@ -1,4 +1,7 @@
-﻿namespace Core
+﻿using System.Net.Http;
+using System.Net.Sockets;
+
+namespace Core
 {
     public interface ICommand
     {

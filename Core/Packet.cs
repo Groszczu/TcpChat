@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Data.Common;
 using System.Linq;
 using System.Reflection;
@@ -11,52 +12,101 @@ namespace Core
     public class Packet
     {
         private const int FormatBytes = 4;
-        
-        [HeaderProperty(1, "id", 36 + 2 + FormatBytes, typeof(HeaderPropertyFormatter))]
-        public Guid Id { get; set; }
 
-        [HeaderProperty(2, "operation",  12 + 9 + FormatBytes, typeof(HeaderPropertyFormatter))]
-        public Operation Operation { get; set; }
+        public HeaderProperty<Guid> Id { get; set; }
 
-        [HeaderProperty(3, "status",   12 + 6 + FormatBytes, typeof(HeaderPropertyFormatter))]
-        public Status Status { get; set; }
+        public HeaderProperty<Operation> Operation { get; set; }
 
-        [HeaderProperty( 4, "destination",    1 + 11 + FormatBytes, typeof(HeaderPropertyFormatter))]
-        public int DestinationId { get; set; }
+        public HeaderProperty<Status> Status { get; set; }
 
-        [HeaderProperty(5, "length",  5 + 6 + FormatBytes, typeof(HeaderPropertyFormatter))]
-        public int MessageLength { get; set; }
+        public HeaderProperty<Timestamp> Timestamp { get; set; }
 
-        [HeaderProperty( 6, "message",  65536 + 7 + FormatBytes, typeof(HeaderPropertyFormatter))]
-        public string Message { get; set; }
+        public HeaderProperty<int> DestinationId { get; set; }
 
-        public static int MaximumPacketSize => GetMaximumPacketSize();
+        public HeaderProperty<int> MessageLength { get; set; }
+
+        public HeaderProperty<string> Message { get; set; }
+
+        public const int MaximumPacketSize = 2048;
 
         public Packet()
         {
         }
 
-        public Packet(Operation operation, Status status, Guid id, string message, int destinationId = -1)
+        public Packet(Operation operation, Status status, Guid id, Timestamp timestamp = null)
         {
-            Operation = operation;
-            Status = status;
-            Id = id;
-            Message = message;
-            MessageLength = message.Length;
-            DestinationId = destinationId;
+            SetId(id);
+            SetOperation(operation);
+            SetStatus(status);
+            if (timestamp == null)
+                timestamp = new Timestamp(DateTime.UtcNow);
+            SetTimestamp(timestamp);
+
+            DestinationId = new HeaderProperty<int>();
+            MessageLength = new HeaderProperty<int>();
+            Message = new HeaderProperty<string>();
         }
 
-        private static int GetMaximumPacketSize()
+        public IEnumerable<IHeaderProperty> GetSetProperties()
         {
-            var headerProperties = typeof(Packet).GetProperties()
-                .Where(prop => Attribute.IsDefined(prop, typeof(HeaderProperty)));
-            
-            
-            var maximumLengthOfHeaderProperties =  headerProperties
-                .Select(propertyInfo => (HeaderProperty) propertyInfo.GetCustomAttribute(typeof(HeaderProperty)))
-                .Select(attribute => attribute.MaximumLengthInBytes)
-                .Sum();
-            return maximumLengthOfHeaderProperties;
+            var allProperties = GetType().GetProperties();
+            var setProperties = new HashSet<IHeaderProperty>();
+
+            foreach (var propertyInfo in allProperties)
+            {
+                var propValue = (IHeaderProperty) propertyInfo.GetValue(this, null);
+                var isSet = propValue.IsSet;
+                if (isSet)
+                {
+                    setProperties.Add(propValue);
+                }
+            }
+
+            return setProperties;
+        }
+
+        public Packet SetId(Guid id)
+        {
+            Id = new HeaderProperty<Guid>(id, "id", 36 + "id".Length + FormatBytes, true);
+            return this;
+        }
+
+        public Packet SetOperation(Operation operation)
+        {
+            Operation = new HeaderProperty<Operation>(operation, "operation", 
+                1 + "operation".Length + FormatBytes, true);
+            return this;
+        }
+
+        public Packet SetStatus(Status status)
+        {
+            Status = new HeaderProperty<Status>(status, "status",
+                1 + "status".Length + FormatBytes, true);
+            return this;
+        }
+
+        public Packet SetTimestamp(Timestamp timestamp)
+        {
+            Timestamp = new HeaderProperty<Timestamp>(timestamp, "timestamp", 
+                16 + "timestamp".Length + FormatBytes, true);
+            return this;
+        }
+        
+        public Packet SetDestinationId(int destinationId)
+        {
+            DestinationId = new HeaderProperty<int>(destinationId, "destination",
+                1 + "destination".Length + FormatBytes, true);
+            return this;
+        }
+
+        public Packet SetMessage(string message)
+        {
+            Message = new HeaderProperty<string>(message, "message",
+                65536 + "message".Length + FormatBytes, true);
+            var str = (string) Message.ObjectValue;
+            MessageLength = new HeaderProperty<int>(str.Length, "length",
+                5 + "length".Length + FormatBytes, true);
+            return this;
         }
     }
 }

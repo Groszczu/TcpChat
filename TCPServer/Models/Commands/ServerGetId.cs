@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Net.Sockets;
 using System.Text;
 using Core;
 using TCPServer.Services;
@@ -22,14 +23,19 @@ namespace TCPServer.Models.Commands
             _packetFormatter = packetFormatter;
             _sessionId = sessionsRepository.GetSessionId(client);
 
-            Packet = new Packet(Operation.GetId, Status.Ok, _sessionId, GenerateMessage());
+            Packet = new Packet(Operation.GetId, Status.Ok, _sessionId).SetMessage(GenerateMessage());
         }
 
         public void Execute()
         {
-            var stream = _client.Socket.GetStream();
             var serializedMessage = _packetFormatter.Serialize(Packet);
-            stream.Write(serializedMessage, 0, serializedMessage.Length);
+            _client.SendTo(serializedMessage);
+        }
+
+        private void ValidateRequest()
+        {
+            if (!_client.Socket.Connected)
+                throw new InvalidOperationException("Client is not connected");
         }
 
         private string GenerateMessage()

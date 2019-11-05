@@ -18,8 +18,10 @@ namespace TCPClient
     {
         private readonly IPacketFormatter _packetFormatter;
         private readonly ICommandHandler _commandHandler;
+        private ISender _byteSender;
         private TcpClient _client;
         private Guid _sessionId = Guid.Empty;
+        private int _id;
         private Status _status = Status.Ok;
 
         private IPAddress _ip;
@@ -66,7 +68,7 @@ namespace TCPClient
                         TryToConnect();
                         break;
                     case "-id":
-                        _commandHandler.Handle(new ClientGetId(_sessionId, _stream, _packetFormatter));
+                        _commandHandler.Handle(new ClientGetId(_sessionId, _byteSender, _packetFormatter));
                         _reset.WaitOne();
                         break;
                     case var someVal when someVal != null && new Regex(@"^-i\s+.*$").IsMatch(someVal):
@@ -74,9 +76,8 @@ namespace TCPClient
                         if (correctInviteRegex.IsMatch(tag))
                         {
                             var destinationId = int.Parse(correctInviteRegex.Match(tag).Groups["id"].Value);
-                            _commandHandler.Handle(new ClientInvite(destinationId, _sessionId, _stream,
+                            _commandHandler.Handle(new ClientInvite(destinationId, _sessionId, _byteSender,
                                 _packetFormatter));
-                            Console.WriteLine($"Invited client with ID: {destinationId} to your session");
                         }
                         else
                         {
@@ -106,18 +107,6 @@ namespace TCPClient
             if (IsConnected())
                 Disconnect();
             Environment.Exit(0);
-        }
-
-        private void InviteUserById(int id)
-        {
-            Console.WriteLine(id);
-            if (!IsConnected())
-            {
-                Console.WriteLine("Please connect to the server first");
-                return;
-            }
-
-            //Send(MakeHeader());
         }
 
         private bool IsConnected()
@@ -164,12 +153,15 @@ namespace TCPClient
             {
                 Console.WriteLine("Connected successfully");
                 _stream = _client.GetStream();
+                _byteSender = new ByteSender(_stream);
 
-                new Thread(() =>
+                _receivingThread = new Thread(() =>
                 {
                     Thread.CurrentThread.IsBackground = true;
                     ReceiveAndPrint().GetAwaiter().GetResult();
-                }).Start();
+                });
+                
+                _receivingThread.Start();
             }
             else
             {
@@ -188,14 +180,16 @@ namespace TCPClient
 
         private void ProcessPacket(Packet data)
         {
-            switch (data.Operation)
+            Console.WriteLine(data.Message.Value);
+            if (data.Status.Value == Status.Unauthorized)
+                return;
+            switch (data.Operation.Value)
             {
                 case Operation.GetId:
-                    _sessionId = data.Id;
-                    Console.WriteLine(data.Message);
+                    _sessionId = data.Id.Value;
                     break;
                 case Operation.Invite:
-                    PrintInvite(data);
+                    
                     break;
                 //case Operation.AcceptInvite: AcceptInvite(source);
                 //    break;
@@ -206,11 +200,6 @@ namespace TCPClient
             }
 
             _reset.Set();
-        }
-
-        private void PrintInvite(Packet packet)
-        {
-            Console.WriteLine(packet.Message);
         }
 
         private void Disconnect()

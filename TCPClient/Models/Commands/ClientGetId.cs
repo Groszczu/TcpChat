@@ -8,20 +8,20 @@ namespace TCPClient.Models.Commands
     public class ClientGetId : ICommand
     {
         public Packet Packet { get; set; }
-        private readonly NetworkStream _stream;
+        private readonly ISender _sender;
         private readonly IPacketFormatter _packetFormatter;
 
-        public ClientGetId(Guid sessionId, NetworkStream stream, IPacketFormatter packetFormatter)
+        public ClientGetId(Guid sessionId, ISender sender, IPacketFormatter packetFormatter)
         {
-            _stream = stream;
+            _sender = sender;
             _packetFormatter = packetFormatter;
-            Packet = new Packet(Operation.GetId, Status.Ok, sessionId, "No message");
+            Packet = new Packet(Operation.GetId, Status.Ok, sessionId);
         }
 
         public void Execute()
         {
             var serializedMessage = _packetFormatter.Serialize(Packet);
-            _stream.Write(serializedMessage, 0, serializedMessage.Length);
+            _sender.Send(serializedMessage);
         }
     }
 }
