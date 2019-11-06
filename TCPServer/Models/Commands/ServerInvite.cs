@@ -1,72 +1,63 @@
 ﻿using System;
-using System.Linq;
-using System.Net.Sockets;
 using Core;
 using TCPServer.Services;
 
 namespace TCPServer.Models.Commands
 {
-    public class ServerInvite : ICommand
+    public class ServerInvite : ServerCommand
     {
-        public Packet Packet { get; set; }
-
-        private readonly ClientData _source;
-        private ClientData _destination;
-        private readonly ISessionsRepository _sessionsRepository;
-        private readonly IPacketFormatter _packetFormatter;
-        private readonly Guid _destinationSessionId;
+        private readonly int _destinationId;
         private readonly Guid _sourceSessionId;
 
         public ServerInvite(ClientData source, int destinationId, ISessionsRepository sessionsRepository,
             IPacketFormatter packetFormatter)
+            : base(source, sessionsRepository, packetFormatter, Operation.Invite, Status.Ok)
         {
-            _source = source;
-            _sessionsRepository = sessionsRepository;
-            _packetFormatter = packetFormatter;
-
-            ValidateClientIdAndInitialize(destinationId);
-            _destinationSessionId = sessionsRepository.GetSessionId(_destination);
-            _sourceSessionId = sessionsRepository.GetSessionId(_source);
-            ValidateInvite();
-
-            Packet = new Packet(Operation.Invite, Status.Ok, _destinationSessionId)
-                .SetDestinationId(_destination.Id)
-                .SetMessage(GenerateMessage());
+            _destinationId = destinationId;
+            _sourceSessionId = SessionsRepository.GetSessionId(Source);
         }
 
-        private void ValidateClientIdAndInitialize(int destinationId)
+        protected override void ValidateAndInitializeCommandArguments()
+        {
+            ValidateAndInitializeDestinationId();
+            ValidateAndInitializeSessionIds();
+        }
+
+        private void ValidateAndInitializeDestinationId()
         {
             try
             {
-                _destination = _sessionsRepository.GetClientById(destinationId);
+                Destination = SessionsRepository.GetClientById(_destinationId);
             }
             catch (InvalidOperationException)
             {
-                throw new InvalidOperationException($"There is no user with ID: {destinationId}");
+                throw new InvalidOperationException($"There is no user with ID: {_destinationId}");
             }
         }
 
-        public void Execute()
+        private void ValidateAndInitializeSessionIds()
         {
-            _destination.AddNewInvite(_source.Id, _sourceSessionId);
-            var serializedMessage = _packetFormatter.Serialize(Packet);
-            _destination.SendTo(serializedMessage);
-        }
+            if (Destination == Source)
+                throw new InvalidOperationException("You cannot invite yourself to the session");
 
-        private void ValidateInvite()
-        {
-            if (_destination.Id == _source.Id)
-                throw new InvalidOperationException("User cannot invite himself to session");
-
-            if (_destinationSessionId == _sourceSessionId)
+            if (SessionsRepository.GetNumberOfClientsInSession(_sourceSessionId) == 2)
+                throw new InvalidOperationException("Your session is full");
+            DestinationSessionId = SessionsRepository.GetSessionId(Destination);
+            
+            if (DestinationSessionId == _sourceSessionId)
                 throw new InvalidOperationException("User you are inviting is already in your session");
         }
 
-        private string GenerateMessage()
+        protected override void GenerateAndSetMassage()
         {
-            var baseMessage =
-                $"You (client {_destination.Id}) got invite from client {_source.Id} to session {_sourceSessionId}";
-            return baseMessage;
+            var message = $"You (client {Destination.Id}) got invite from client {Source.Id} to session {_sourceSessionId}";
+            Packet.SetMessage(message);
+        }
+
+        public override void Execute()
+        {
+            base.Execute();
+            Destination.AddNewInvite(Source.Id, _sourceSessionId);
         }
     }
 }

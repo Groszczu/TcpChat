@@ -11,6 +11,8 @@ using System.Threading.Tasks;
 using Core;
 using Microsoft.VisualBasic;
 using TCPClient.Models.Commands;
+using TCPClient.Services;
+using TCPClient.Services.TagValidators;
 
 namespace TCPClient
 {
@@ -18,6 +20,7 @@ namespace TCPClient
     {
         private readonly IPacketFormatter _packetFormatter;
         private readonly ICommandHandler _commandHandler;
+        private readonly ITagValidator _tagValidator;
         private ISender _byteSender;
         private TcpClient _client;
         private Guid _sessionId = Guid.Empty;
@@ -30,21 +33,6 @@ namespace TCPClient
         private NetworkStream _stream;
 
         private Thread _receivingThread;
-        private readonly ManualResetEvent _reset = new ManualResetEvent(false);
-
-        private DateTime _connectionTime;
-
-        public DateTime ConnectionTime
-        {
-            get => _connectionTime;
-            private set
-            {
-                if (value.CompareTo(_connectionTime) > 0)
-                {
-                    _connectionTime = value;
-                }
-            }
-        }
 
         public Client(IPacketFormatter packetFormatter, ICommandHandler commandHandler)
         {
@@ -60,64 +48,82 @@ namespace TCPClient
             _port = port;
             while (true)
             {
-                Console.WriteLine("\nEnter operation tag:");
                 var tag = Console.ReadLine();
-                switch (tag)
-                {
-                    case "-cn":
-                        TryToConnect();
-                        break;
-                    case "-id":
-                        _commandHandler.Handle(new ClientGetId(_sessionId, _byteSender, _packetFormatter));
-                        _reset.WaitOne();
-                        break;
-                    case var someVal when someVal != null && new Regex(@"^-i\s+.*$").IsMatch(someVal):
-                        var correctInviteRegex = new Regex(@"^-i\s+(?<id>\d+)$");
-                        if (correctInviteRegex.IsMatch(tag))
-                        {
-                            var destinationId = int.Parse(correctInviteRegex.Match(tag).Groups["id"].Value);
-                            _commandHandler.Handle(new ClientInvite(destinationId, _sessionId, _byteSender,
-                                _packetFormatter));
-                        }
-                        else
-                        {
-                            InvalidInputMessage("Invite", "-i [id]");
-                        }
-                        break;
-                    case var someVal when someVal != null && new Regex(@"^-a\s+.*$").IsMatch(someVal):
-                        var correctAcceptInviteRegex = new Regex(@"^-a\s+(?<id>\d+)$");
-                        if (tag != null && correctAcceptInviteRegex.IsMatch(tag))
-                        {
-                            var inviterId = int.Parse(correctAcceptInviteRegex.Match(tag).Groups["id"].Value);
-                            _commandHandler.Handle(new ClientAcceptInvite(inviterId, _sessionId, _byteSender,
-                                _packetFormatter));
-                        }
-                        else
-                        {
-                            InvalidInputMessage("Accept invite", "-a [id]");
-                        }
-                        break;
-                    //case "-c": CloseSession();
-                    //   break;
-                    case "-q":
-                        TryToQuit();
-                        break;
-                    case "-h":
-                        PrintHelp();
-                        break;
-                    default:
-                        Console.WriteLine("Invalid operation tag");
-                        Console.WriteLine("Enter '-h' to get help");
-                        break;
-                }
+                ProcessTag(tag);
             }
         }
 
-        private void InvalidInputMessage(string operationName, string pattern)
+        private void ProcessTag(string tag)
+        {
+            ITagFollowedByValueValidator validator;
+            if (new HelpTagValidator().Validate(tag))
+            {
+                PrintHelp();
+                return;
+            }
+
+            if (new ConnectionTagValidator().Validate(tag))
+            {
+                TryToConnect();
+                return;
+            }
+
+            if (!IsConnected())
+            {
+                PrintConnectionRequest();
+                return;
+            }
+
+            ICommand command = null;
+            if (new IdTagValidator().Validate(tag))
+                command = new ClientGetId(_sessionId, _byteSender, _packetFormatter);
+
+            if ((validator = new InviteTagValidator()).Validate(tag))
+            {
+                var destinationId = int.Parse(validator.GetMatchedValue(tag));
+                command = new ClientInvite(destinationId, _sessionId, _byteSender,
+                    _packetFormatter);
+            }
+
+            if ((validator = new AcceptTagValidator()).Validate(tag))
+            {
+                var destinationId = int.Parse(validator.GetMatchedValue(tag));
+                command = new ClientAcceptInvite(destinationId, _sessionId, _byteSender,
+                    _packetFormatter);
+            }
+
+            if ((validator = new DeclineTagValidator()).Validate(tag))
+            {
+                var destinationId = int.Parse(validator.GetMatchedValue(tag));
+                command = new ClientDeclineInvite(destinationId, _sessionId, _byteSender,
+                    _packetFormatter);
+            }
+
+            if ((validator = new MessageTagValidator()).Validate(tag))
+            {
+                var messageToSend = validator.GetMatchedValue(tag);
+                command = new ClientSendMessage(_sessionId, _byteSender, _packetFormatter, messageToSend);
+            }
+
+            if (command != null)
+            {
+                _commandHandler.Handle(command);
+            }
+            else
+            {
+                PrintInvalidInputMessage();
+            }
+        }
+
+        private void PrintConnectionRequest()
+        {
+            Console.WriteLine("Please connect to the server first");
+        }
+
+        private void PrintInvalidInputMessage()
         {
             Console.WriteLine("Invalid input");
-            Console.WriteLine($"{operationName} operation should be organized like shown below:");
-            Console.WriteLine(pattern);
+            Console.WriteLine("Enter '-h' to get help");
         }
 
         private void TryToQuit()
@@ -135,13 +141,13 @@ namespace TCPClient
         private void PrintHelp()
         {
             Console.WriteLine("Options:");
-            Console.WriteLine("-cn".PadRight(20) + "try to connect to server");
-            Console.WriteLine("-id".PadRight(20) + "get your session id");
-            Console.WriteLine("-i".PadRight(20) + "user to your session " +
-                              "(only if there is other user connected to the server");
-            Console.WriteLine("-a".PadRight(20) + "accept invite to other session");
-            Console.WriteLine("-c".PadRight(20) + "close current session");
-            Console.WriteLine("-q".PadRight(20) + "quit program");
+            Console.WriteLine($"{"-cn",-20}try to connect to server");
+            Console.WriteLine($"{"-id",-20}get your session id");
+            Console.WriteLine($"{"-i",-20}user to your session " +
+                              "(only if there is other user connected to the server)");
+            Console.WriteLine($"{"-a",-20}accept invite to other session");
+            Console.WriteLine($"{"-c",-20}close current session");
+            Console.WriteLine($"{"-q",-20}quit program");
         }
 
         private void TryToConnect(int maxAttempts = 3)
@@ -194,23 +200,10 @@ namespace TCPClient
             Console.WriteLine(data.Message.Value);
             if (data.Status.Value == Status.Unauthorized)
                 return;
-            switch (data.Operation.Value)
+            if (data.Operation.Value == Operation.GetId)
             {
-                case Operation.GetId:
-                    _sessionId = data.Id.Value;
-                    break;
-                case Operation.Invite:
-
-                    break;
-                //case Operation.AcceptInvite: AcceptInvite(source);
-                //    break;
-                //case Operation.Send: SendMessage(source, data.Message);
-                //    break;
-                //case Operation.Disconnect: Disconnect(source) ;
-                //    break;
+                _sessionId = data.Id.Value;
             }
-
-            _reset.Set();
         }
 
         private void Disconnect()

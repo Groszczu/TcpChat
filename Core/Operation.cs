@@ -4,7 +4,7 @@
     {
         Invite,
         GetId,
-        Send,
+        Message,
         Disconnect
     }
 }

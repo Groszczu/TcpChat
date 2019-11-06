@@ -4,67 +4,60 @@ using TCPServer.Services;
 
 namespace TCPServer.Models.Commands
 {
-    public class ServerAcceptInvite : ICommand
+    public class ServerAcceptInvite : ServerCommand
     {
-        private readonly ClientData _source;
-        private ClientData _inviter;
-        private readonly ISessionsRepository _sessionsRepository;
-        private readonly IPacketFormatter _packetFormatter;
-        private Guid _inviterSessionId;
-        private Guid _sourceSessionId;
-        public Packet Packet { get; set; }
+        private readonly int _destinationId;
 
-        public ServerAcceptInvite(ClientData source, int inviterId, ISessionsRepository sessionsRepository,
-            IPacketFormatter packetFormatter)
+        public ServerAcceptInvite(ClientData source, int destinationId, ISessionsRepository sessionsRepository,
+            IPacketFormatter packetFormatter) 
+            : base(source, sessionsRepository, packetFormatter, Operation.Invite, Status.Accept)
         {
-            _source = source;
-            _sessionsRepository = sessionsRepository;
-            _packetFormatter = packetFormatter;
-            
-            ValidateInviterIdAndInitialize(inviterId);
-            ValidateAndInitializeSessionIds();
-            
-            Packet = new Packet(Operation.Invite, Status.Accept, _inviterSessionId)
-                .SetDestinationId(_inviter.Id)
-                .SetMessage(GenerateMessage());
+            _destinationId = destinationId;
         }
 
-        private string GenerateMessage()
+        protected override void ValidateAndInitializeCommandArguments()
         {
-            var message =
-                $"Client with ID {_source.Id} accepted your invite. You can chat now using '-m [message]' tag";
-            return message;
+            ValidateAndInitializeDestinationId();
+            ValidateAndInitializeSessionIds();
+        }
+
+        private void ValidateAndInitializeDestinationId()
+        {
+            try
+            {
+                Destination = SessionsRepository.GetClientById(_destinationId);
+            }
+            catch (InvalidOperationException)
+            {
+                throw new InvalidOperationException($"There is no user with ID: {_destinationId}");
+            }
         }
 
         private void ValidateAndInitializeSessionIds()
         {
-            if (_inviter.Id == _source.Id)
+            if (Destination == Source)
                 throw new InvalidOperationException("You cannot accept invitation (or invite) yourself");
-            if (!_source.GotInviteFrom(_inviter.Id))
-                throw new InvalidOperationException($"You have not received an invitation from a client with ID {_inviter.Id}");
-            
-            _sourceSessionId = _sessionsRepository.GetSessionId(_source);
-            _inviterSessionId = _sessionsRepository.GetSessionId(_inviter);
+            if (!Source.GotInviteFrom(Destination.Id))
+                throw new InvalidOperationException(
+                    $"You have not received an invitation from a client with ID {Destination.Id}");
+
+            DestinationSessionId = SessionsRepository.GetSessionId(Destination);
+            var sourceSessionId = SessionsRepository.GetSessionId(Source);
+            if (DestinationSessionId == sourceSessionId)
+                throw new InvalidOperationException("User you are inviting is already in your session");
         }
 
-        private void ValidateInviterIdAndInitialize(int inviterId)
+        protected override void GenerateAndSetMassage()
         {
-            try
-            {
-                _inviter = _sessionsRepository.GetClientById(inviterId);
-            }
-            catch (InvalidOperationException)
-            {
-                throw new InvalidOperationException($"There is no user with ID: {inviterId}");
-            }
+            var message = $"Client with ID {Source.Id} accepted your invite. You can chat now";
+            Packet.SetMessage(message);
         }
 
-        public void Execute()
+        public override void Execute()
         {
-            _sessionsRepository.UpdateClientSessionId(_source, _inviterSessionId);
-            _source.RemoveInvite(_inviter.Id);
-            var serializedMessage = _packetFormatter.Serialize(Packet);
-            _inviter.SendTo(serializedMessage);
+            base.Execute();
+            SessionsRepository.UpdateClientSessionId(Source, DestinationSessionId);
+            Source.RemoveInvite(Destination.Id);
         }
     }
 }

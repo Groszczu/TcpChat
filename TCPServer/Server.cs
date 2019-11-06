@@ -42,8 +42,6 @@ namespace TCPServer
             _server.Start();
             while (!_shutDown)
             {
-                Console.WriteLine("\nEnter operation tag:");
-
                 var tag = Console.ReadLine();
                 switch (tag)
                 {
@@ -80,10 +78,10 @@ namespace TCPServer
         private void PrintHelp()
         {
             Console.WriteLine("Options:");
-            Console.WriteLine("-s".PadRight(20) + "start listening to clients");
-            Console.WriteLine("-d".PadRight(20) + "disconnect all clients");
-            Console.WriteLine("-h".PadRight(20) + "open help menu");
-            Console.WriteLine("-q".PadRight(20) + "try to quit program");
+            Console.WriteLine($"{"-s",-20}start listening to clients");
+            Console.WriteLine($"{"-d",-20}disconnect all clients");
+            Console.WriteLine($"{"-h",-20}open help menu");
+            Console.WriteLine($"{"-q",-20}try to quit program");
         }
 
         private void HandleConnection()
@@ -132,32 +130,27 @@ namespace TCPServer
                 switch (data.Operation.Value)
                 {
                     case Operation.GetId:
-                        lock (_lock) command = new ServerGetId(source, _sessionsRepository, _packetFormatter);
+                        lock (_lock)
+                            command = new ServerGetId(source, _sessionsRepository, _packetFormatter);
                         break;
                     case Operation.Invite:
                         lock (_lock)
-                        {
-                            switch (data.Status.Value)
+                            command = data.Status.Value switch
                             {
-                                case Status.Ok:
-                                    command = new ServerInvite(source, data.DestinationId.Value,
-                                        _sessionsRepository,
-                                        _packetFormatter);
-                                    break;
-                                case Status.Accept:
-                                    command = new ServerAcceptInvite(source, data.DestinationId.Value,
-                                        _sessionsRepository, _packetFormatter);
-                                    break;
-                                case Status.Decline:
-                                    break;
-                            }
-                        }
-
+                                Status.Ok => new ServerInvite(source, data.DestinationId.Value, _sessionsRepository,
+                                    _packetFormatter),
+                                Status.Accept => new ServerAcceptInvite(source, data.DestinationId.Value,
+                                    _sessionsRepository, _packetFormatter),
+                                Status.Decline => new ServerDeclineInvite(source, data.DestinationId.Value,
+                                    _sessionsRepository, _packetFormatter),
+                                _ => (ICommand) null
+                            };
                         break;
-                    //case Operation.AcceptInvite: AcceptInvite(source);
-                    //    break;
-                    //case Operation.Send: SendMessage(source, data.Message);
-                    //    break;
+                    case Operation.Message:
+                        lock (_lock) 
+                            command = new ServerSendMessage(source, 
+                                _sessionsRepository, _packetFormatter, data.Message.Value);
+                        break;
                     case Operation.Disconnect:
                         lock (_lock)
                         {
@@ -166,6 +159,8 @@ namespace TCPServer
 
                         break;
                 }
+                if (command != null)
+                    _commandHandler.Handle(command);
             }
             catch (InvalidOperationException exception)
             {
@@ -178,75 +173,6 @@ namespace TCPServer
             {
                 source.SendTo(_packetFormatter.Serialize(errorPacket));
             }
-            else if (command != null)
-            {
-                _commandHandler.Handle(command);
-            }
-        }
-
-        private ICommand DetermineCommand(ClientData source, Packet packet)
-        {
-            ICommand command = null;
-            Guid sourceSessionId;
-            lock (_lock) sourceSessionId = _sessionsRepository.GetSessionId(source);
-            var errorPacket = new Packet(packet.Operation.Value, Status.Unauthorized, sourceSessionId);
-            switch (packet.Operation.Value)
-            {
-                case Operation.GetId:
-                {
-                    try
-                    {
-                        lock (_lock) command = new ServerGetId(source, _sessionsRepository, _packetFormatter);
-                    }
-                    catch (InvalidOperationException exception)
-                    {
-                        Console.WriteLine(exception.Message);
-                        errorPacket.SetMessage(exception.Message);
-                    }
-                }
-                    break;
-                case Operation.Invite:
-                    lock (_lock)
-                    {
-                        try
-                        {
-                            switch (packet.Status.Value)
-                            {
-                                case Status.Ok:
-                                    command = new ServerInvite(source, packet.DestinationId.Value, _sessionsRepository,
-                                        _packetFormatter);
-                                    break;
-                                case Status.Accept:
-                                    command = new ServerAcceptInvite(source, packet.DestinationId.Value,
-                                        _sessionsRepository, _packetFormatter);
-                                    break;
-                                case Status.Decline:
-                                    break;
-                            }
-                        }
-                        catch (InvalidOperationException exception)
-                        {
-                            Console.WriteLine(exception.Message);
-                            command = null;
-                            errorPacket.SetMessage(exception.Message);
-                        }
-                    }
-
-                    break;
-                //case Operation.AcceptInvite: AcceptInvite(source);
-                //    break;
-                //case Operation.Send: SendMessage(source, data.Message);
-                //    break;
-                case Operation.Disconnect:
-                    lock (_lock)
-                    {
-                        //command = new ServerDisconnect(source)
-                    }
-
-                    break;
-            }
-
-            return command;
         }
     }
 }

@@ -7,58 +7,26 @@ using TCPServer.Services;
 
 namespace TCPServer.Models.Commands
 {
-    public class ServerGetId : ICommand
+    public class ServerGetId : ServerCommand
     {
-        public Packet Packet { get; set; }
-
-        private readonly ClientData _client;
-        private readonly ISessionsRepository _sessionsRepository;
-        private readonly IPacketFormatter _packetFormatter;
-        private readonly Guid _sessionId;
-
-        public ServerGetId(ClientData client, ISessionsRepository sessionsRepository, IPacketFormatter packetFormatter)
+        public ServerGetId(ClientData source, ISessionsRepository sessionsRepository, IPacketFormatter packetFormatter)
+            : base(source, sessionsRepository, packetFormatter, Operation.GetId, Status.Ok)
         {
-            _client = client;
-            _sessionsRepository = sessionsRepository;
-            _packetFormatter = packetFormatter;
-            _sessionId = sessionsRepository.GetSessionId(client);
-
-            Packet = new Packet(Operation.GetId, Status.Ok, _sessionId).SetMessage(GenerateMessage());
+            Destination = source;
         }
 
-        public void Execute()
+        protected override void ValidateAndInitializeCommandArguments()
         {
-            var serializedMessage = _packetFormatter.Serialize(Packet);
-            _client.SendTo(serializedMessage);
+            DestinationSessionId = SessionsRepository.GetSessionId(Source);
         }
 
-        private void ValidateRequest()
+        protected override void GenerateAndSetMassage()
         {
-            if (!_client.Socket.Connected)
-                throw new InvalidOperationException("Client is not connected");
-        }
-
-        private string GenerateMessage()
-        {
-            var message = new StringBuilder($"Your client ID: {_client.Id}, Your session ID: \'{_sessionId}\'");
-            var otherClients = _sessionsRepository.GetAllClients().Where(client => client.Id != _client.Id).ToArray();
-
-            if (otherClients.Length == 0)
-            {
-                message.Append(" No other clients connected to server");
-            }
-            else
-            {
-                message.Append(" Other client IDs: ");
-
-                var delimiter = string.Empty;
-                foreach (var clientData in otherClients)
-                {
-                    message.Append(delimiter + clientData.Id);
-                    delimiter = ", ";
-                }
-            }
-            return message.ToString();
+            var message =
+                new StringBuilder($"Your client ID: {Source.Id}, Your session ID: \'{DestinationSessionId}\'");
+            var otherIdsMessage = SessionsRepository.GetOtherClientsIdsToString(Source);
+            message.Append(otherIdsMessage);
+            Packet.SetMessage(message.ToString());
         }
     }
 }

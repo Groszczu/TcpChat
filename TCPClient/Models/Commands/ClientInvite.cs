@@ -15,9 +15,11 @@ namespace TCPClient.Models.Commands
         {
             _sender = sender;
             _packetFormatter = packetFormatter;
-            
-            Packet = new Packet(Operation.Invite, Status.Ok, sessionId).SetDestinationId(destinationId);
+
+            Packet = new Packet(Operation.Invite, Status.Ok, sessionId);
+            Packet.SetDestinationId(destinationId);
         }
+
         public void Execute()
         {
             var serializedMessage = _packetFormatter.Serialize(Packet);

@@ -1,5 +1,6 @@
 ﻿using Core;
 using Microsoft.Extensions.DependencyInjection;
+using TCPClient.Services;
 
 namespace TCPClient
 {

@@ -11,8 +11,10 @@ namespace TCPServer.Services
     {
         void AddSessionRecord(ClientData clientData, Guid sessionId);
         Guid GetSessionId(ClientData clientData);
-        Dictionary<ClientData, Guid>.KeyCollection GetAllClients();
         ClientData GetClientById(int id);
         void UpdateClientSessionId(ClientData clientData, Guid newSessionId);
+        ClientData GetSecondClientFromSession(Guid sessionId, ClientData referenceClient);
+        string GetOtherClientsIdsToString(ClientData referenceClient);
+        int GetNumberOfClientsInSession(Guid sessionId);
     }
 }

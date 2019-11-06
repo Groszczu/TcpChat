@@ -17,4 +17,8 @@
     <Folder Include="Services\CommandHandler" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Remove="Services\ITagValidator.cs" />
+  </ItemGroup>
+
 </Project>

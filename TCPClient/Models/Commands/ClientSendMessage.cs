@@ -3,17 +3,20 @@ using Core;
 
 namespace TCPClient.Models.Commands
 {
-    public class ClientDeclineInvite : ICommand
+    public class ClientSendMessage : ICommand
     {
         private readonly ISender _sender;
         private readonly IPacketFormatter _packetFormatter;
         public Packet Packet { get; set; }
 
-        public ClientDeclineInvite(int inviterId, Guid sessionId, ISender sender, IPacketFormatter packetFormatter)
+        public ClientSendMessage(Guid sessionId, ISender sender, IPacketFormatter packetFormatter,
+            string messageToSend)
         {
             _sender = sender;
             _packetFormatter = packetFormatter;
-            Packet = new Packet(Operation.Invite, Status.Decline, sessionId).SetDestinationId(inviterId);
+
+            Packet = new Packet(Operation.Message, Status.Ok, sessionId);
+            Packet.SetMessage(messageToSend);
         }
 
         public void Execute()
