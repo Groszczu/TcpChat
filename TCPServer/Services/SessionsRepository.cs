@@ -68,6 +68,25 @@ namespace TCPServer.Services
             return _sessions.Count(kv => kv.Value == sessionId);
         }
 
+        public void RemoveClient(ClientData client)
+        {
+            _sessions.Remove(client);
+            client.ToClose = true;
+        }
+
+        public bool IsSessionFull(Guid sessionId)
+        {
+            return GetNumberOfClientsInSession(sessionId) == 2;
+        }
+
+        public void RemoveAllClients()
+        {
+            foreach (var clientData in _sessions.Keys)
+            {
+                RemoveClient(clientData);
+            }
+        }
+
         public Guid GetSessionId(ClientData clientData)
         {
             if (!_sessions.ContainsKey(clientData))

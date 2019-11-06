@@ -9,7 +9,7 @@ namespace TCPServer.Models.Commands
         private readonly int _destinationId;
 
         public ServerAcceptInvite(ClientData source, int destinationId, ISessionsRepository sessionsRepository,
-            IPacketFormatter packetFormatter) 
+            IPacketFormatter packetFormatter)
             : base(source, sessionsRepository, packetFormatter, Operation.Invite, Status.Accept)
         {
             _destinationId = destinationId;
@@ -45,6 +45,11 @@ namespace TCPServer.Models.Commands
             var sourceSessionId = SessionsRepository.GetSessionId(Source);
             if (DestinationSessionId == sourceSessionId)
                 throw new InvalidOperationException("User you are inviting is already in your session");
+            
+            if (SessionsRepository.IsSessionFull(sourceSessionId))
+                throw new InvalidOperationException("Your session is full");
+            if (SessionsRepository.IsSessionFull(DestinationSessionId))
+                throw new InvalidOperationException($"Client's {Destination.Id} session is full");
         }
 
         protected override void GenerateAndSetMassage()
@@ -57,7 +62,7 @@ namespace TCPServer.Models.Commands
         {
             base.Execute();
             SessionsRepository.UpdateClientSessionId(Source, DestinationSessionId);
-            Source.RemoveInvite(Destination.Id);
+            Source.RemoveAllPendingInvites();
         }
     }
 }

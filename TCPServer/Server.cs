@@ -23,6 +23,8 @@ namespace TCPServer
         private readonly object _lock = new object();
         private TcpListener _server;
 
+        private Thread _connectionThread;
+
         private bool _shutDown = false;
 
         private static int _nextClientId = 1;
@@ -46,13 +48,24 @@ namespace TCPServer
                 switch (tag)
                 {
                     case "-s":
-                        HandleConnection();
+                        _connectionThread = new Thread(() =>
+                        {
+                            Thread.CurrentThread.IsBackground = true;
+                            HandleConnection();
+                        });
+                        _connectionThread.Start();
                         break;
                     case "-d":
                         DisconnectAllClients();
+                        Console.WriteLine("Disconnected all clients");
                         break;
                     case "-q":
-                        TryToQuit();
+                        // TODO: server disconnects all clients and quit correcly
+                        DisconnectAllClients();
+                        _server.Stop();
+                        if (_connectionThread != null && _connectionThread.IsAlive)
+                            _connectionThread.Join();
+                        DisconnectAllClientsAndQuit();
                         break;
                     case "-h":
                         PrintHelp();
@@ -65,31 +78,22 @@ namespace TCPServer
             }
         }
 
-        private void TryToQuit()
-        {
-            _shutDown = true;
-            _server.Stop();
-        }
-
-        private void DisconnectAllClients()
-        {
-        }
-
-        private void PrintHelp()
-        {
-            Console.WriteLine("Options:");
-            Console.WriteLine($"{"-s",-20}start listening to clients");
-            Console.WriteLine($"{"-d",-20}disconnect all clients");
-            Console.WriteLine($"{"-h",-20}open help menu");
-            Console.WriteLine($"{"-q",-20}try to quit program");
-        }
-
         private void HandleConnection()
         {
             while (!_shutDown)
             {
                 Console.WriteLine("Waiting for connection...");
-                var newClient = _server.AcceptTcpClient();
+                TcpClient newClient;
+                try
+                {
+                    newClient = _server.AcceptTcpClient();
+                }
+                catch (SocketException)
+                {
+                    Console.WriteLine("Stopped waiting for connections");
+                    return;
+                }
+
                 var newClientId = _nextClientId++;
 
                 var newClientData = new ClientData(newClientId, newClient);
@@ -114,9 +118,20 @@ namespace TCPServer
             {
                 var stream = client.Socket.GetStream();
 
+
                 var receivedPacket = await _packetFormatter.DeserializeAsync(stream);
                 ProcessPacket(client, receivedPacket);
+                
+                if (client.ToClose)
+                {
+                    stream.Close();
+                    client.Socket.Close();
+                    Console.WriteLine($"Client {client.Id} disconnected successfully");
+                    break;
+                }
             }
+
+            Thread.CurrentThread.Join();
         }
 
         private void ProcessPacket(ClientData source, Packet data)
@@ -147,25 +162,22 @@ namespace TCPServer
                             };
                         break;
                     case Operation.Message:
-                        lock (_lock) 
-                            command = new ServerSendMessage(source, 
+                        lock (_lock)
+                            command = new ServerSendMessage(source,
                                 _sessionsRepository, _packetFormatter, data.Message.Value);
                         break;
                     case Operation.Disconnect:
                         lock (_lock)
-                        {
-                            //command = new ServerDisconnect(source)
-                        }
-
+                            command = new ServerDisconnect(source, _sessionsRepository, _packetFormatter);
                         break;
                 }
+
                 if (command != null)
                     _commandHandler.Handle(command);
             }
             catch (InvalidOperationException exception)
             {
                 Console.WriteLine(exception.Message);
-                command = null;
                 errorPacket.SetMessage(exception.Message);
             }
 
@@ -173,6 +185,27 @@ namespace TCPServer
             {
                 source.SendTo(_packetFormatter.Serialize(errorPacket));
             }
+        }
+
+        private void DisconnectAllClients()
+        {
+            lock (_lock)
+                _sessionsRepository.RemoveAllClients();
+        }
+
+        private void DisconnectAllClientsAndQuit()
+        {
+            DisconnectAllClients();
+            Environment.Exit(0);
+        }
+
+        private void PrintHelp()
+        {
+            Console.WriteLine("Options:");
+            Console.WriteLine($"{"-s",-20}start listening to clients");
+            Console.WriteLine($"{"-d",-20}disconnect all clients");
+            Console.WriteLine($"{"-h",-20}open help menu");
+            Console.WriteLine($"{"-q",-20}try to quit program");
         }
     }
 }

@@ -16,5 +16,9 @@ namespace TCPServer.Services
         ClientData GetSecondClientFromSession(Guid sessionId, ClientData referenceClient);
         string GetOtherClientsIdsToString(ClientData referenceClient);
         int GetNumberOfClientsInSession(Guid sessionId);
+        void RemoveClient(ClientData client);
+        bool IsSessionFull(Guid sessionId);
+
+        void RemoveAllClients();
     }
 }

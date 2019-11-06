@@ -10,6 +10,8 @@ namespace TCPServer.Models
     {
         public int Id { get; }
         public TcpClient Socket { get; }
+        
+        public bool ToClose { get; set; }
 
         private readonly Dictionary<int, Guid> _pendingInvites = new Dictionary<int, Guid>();
 
@@ -22,6 +24,11 @@ namespace TCPServer.Models
         public void AddNewInvite(int inviterId, Guid inviterSessionId)
         {
             _pendingInvites[inviterId] = inviterSessionId;
+        }
+
+        public void RemoveAllPendingInvites()
+        {
+            _pendingInvites.Clear();
         }
 
         public void RemoveInvite(int inviterId)

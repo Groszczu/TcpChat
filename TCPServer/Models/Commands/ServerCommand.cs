@@ -7,10 +7,12 @@ namespace TCPServer.Models.Commands
     public abstract class ServerCommand : ICommand
     {
         public Packet Packet { get; set; }
+        
         protected readonly ClientData Source;
         protected ClientData Destination;
         protected Guid DestinationSessionId;
         protected readonly ISessionsRepository SessionsRepository;
+        
         private readonly IPacketFormatter _packetFormatter;
         private readonly Operation _operation;
         private readonly Status _status;

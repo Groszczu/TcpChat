@@ -12,18 +12,18 @@ namespace TCPServer.Models.Commands
         public ServerGetId(ClientData source, ISessionsRepository sessionsRepository, IPacketFormatter packetFormatter)
             : base(source, sessionsRepository, packetFormatter, Operation.GetId, Status.Ok)
         {
-            Destination = source;
         }
 
         protected override void ValidateAndInitializeCommandArguments()
         {
+            Destination = Source;
             DestinationSessionId = SessionsRepository.GetSessionId(Source);
         }
 
         protected override void GenerateAndSetMassage()
         {
             var message =
-                new StringBuilder($"Your client ID: {Source.Id}, Your session ID: \'{DestinationSessionId}\'");
+                new StringBuilder($"Your client ID: {Source.Id}, Your session ID: \'{DestinationSessionId}\' ");
             var otherIdsMessage = SessionsRepository.GetOtherClientsIdsToString(Source);
             message.Append(otherIdsMessage);
             Packet.SetMessage(message.ToString());

@@ -5,23 +5,11 @@ using Core;
 
 namespace TCPClient.Models.Commands
 {
-    public class ClientGetId : ICommand
+    public class ClientGetId : ClientCommand
     {
-        public Packet Packet { get; set; }
-        private readonly ISender _sender;
-        private readonly IPacketFormatter _packetFormatter;
-
         public ClientGetId(Guid sessionId, ISender sender, IPacketFormatter packetFormatter)
+            : base(sessionId, sender, packetFormatter, Operation.GetId, Status.Ok)
         {
-            _sender = sender;
-            _packetFormatter = packetFormatter;
-            Packet = new Packet(Operation.GetId, Status.Ok, sessionId);
-        }
-
-        public void Execute()
-        {
-            var serializedMessage = _packetFormatter.Serialize(Packet);
-            _sender.Send(serializedMessage);
         }
     }
 }

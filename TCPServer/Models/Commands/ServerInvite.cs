@@ -40,10 +40,13 @@ namespace TCPServer.Models.Commands
             if (Destination == Source)
                 throw new InvalidOperationException("You cannot invite yourself to the session");
 
-            if (SessionsRepository.GetNumberOfClientsInSession(_sourceSessionId) == 2)
+            if (SessionsRepository.IsSessionFull(_sourceSessionId))
                 throw new InvalidOperationException("Your session is full");
-            DestinationSessionId = SessionsRepository.GetSessionId(Destination);
             
+            if (SessionsRepository.IsSessionFull(DestinationSessionId))
+                throw new InvalidOperationException($"Client's {Destination.Id} session is full");
+
+            DestinationSessionId = SessionsRepository.GetSessionId(Destination);
             if (DestinationSessionId == _sourceSessionId)
                 throw new InvalidOperationException("User you are inviting is already in your session");
         }
