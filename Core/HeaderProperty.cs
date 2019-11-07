@@ -9,14 +9,12 @@ namespace Core
 
         public T Value { get; }
         public string Key { get; }
-        public int MaximumLengthInBytes { get; }
         public bool IsSet { get; }
 
-        public HeaderProperty(T value, string key, int maximumLengthInBytes, bool isSet)
+        public HeaderProperty(T value, string key, bool isSet)
         {
             Value = value;
             Key = key;
-            MaximumLengthInBytes = maximumLengthInBytes;
             IsSet = isSet;
         }
 
@@ -24,7 +22,6 @@ namespace Core
         {
             Value = default;
             Key = default;
-            MaximumLengthInBytes = default;
             IsSet = false;
         }
     }

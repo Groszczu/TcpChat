@@ -13,19 +13,19 @@ namespace Core
     {
         private const int FormatBytes = 4;
 
-        public HeaderProperty<Guid> Id { get; set; }
+        public HeaderProperty<Guid> Id { get; private set; }
 
-        public HeaderProperty<Operation> Operation { get; set; }
+        public HeaderProperty<Operation> Operation { get; private set; }
 
-        public HeaderProperty<Status> Status { get; set; }
+        public HeaderProperty<Status> Status { get; private set; }
 
         public HeaderProperty<Timestamp> Timestamp { get; set; }
 
-        public HeaderProperty<int> DestinationId { get; set; }
+        public HeaderProperty<int> DestinationId { get; private set; }
 
-        public HeaderProperty<int> MessageLength { get; set; }
+        public HeaderProperty<int> MessageLength { get; private set; }
 
-        public HeaderProperty<string> Message { get; set; }
+        public HeaderProperty<string> Message { get; private set; }
 
         public const int MaximumPacketSize = 2048;
 
@@ -67,47 +67,46 @@ namespace Core
 
         public Packet SetId(Guid id)
         {
-            Id = new HeaderProperty<Guid>(id, "id", 36 + "id".Length + FormatBytes, true);
+            Id = new HeaderProperty<Guid>(id, "id", true);
             return this;
         }
 
         public Packet SetOperation(Operation operation)
         {
-            Operation = new HeaderProperty<Operation>(operation, "operation", 
-                1 + "operation".Length + FormatBytes, true);
+            Operation = new HeaderProperty<Operation>(operation, "operation", true);
             return this;
         }
 
         public Packet SetStatus(Status status)
         {
-            Status = new HeaderProperty<Status>(status, "status",
-                1 + "status".Length + FormatBytes, true);
+            Status = new HeaderProperty<Status>(status, "status", true);
             return this;
         }
 
         public Packet SetTimestamp(Timestamp timestamp)
         {
-            Timestamp = new HeaderProperty<Timestamp>(timestamp, "timestamp", 
-                16 + "timestamp".Length + FormatBytes, true);
+            Timestamp = new HeaderProperty<Timestamp>(timestamp, "timestamp", true);
             return this;
         }
         
         public Packet SetDestinationId(int destinationId)
         {
-            DestinationId = new HeaderProperty<int>(destinationId, "destination",
-                1 + "destination".Length + FormatBytes, true);
+            DestinationId = new HeaderProperty<int>(destinationId, "destination", true);
             return this;
         }
 
         public Packet SetMessage(string message)
         {
-            message = message.Replace("|", "");
-            Message = new HeaderProperty<string>(message, "message",
-                65536 + "message".Length + FormatBytes, true);
+            RemoveForbiddenSigns(ref message);
+            Message = new HeaderProperty<string>(message, "message", true);
             var str = (string) Message.ObjectValue;
-            MessageLength = new HeaderProperty<int>(str.Length, "length",
-                5 + "length".Length + FormatBytes, true);
+            MessageLength = new HeaderProperty<int>(str.Length, "length", true);
             return this;
+        }
+
+        private void RemoveForbiddenSigns(ref string message)
+        {
+            message = message.Replace("|", "");
         }
     }
 }
