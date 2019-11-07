@@ -5,6 +5,7 @@
         Invite,
         GetId,
         Message,
-        Disconnect
+        Disconnect,
+        CloseSession
     }
 }

@@ -11,23 +11,15 @@ namespace Core
 {
     public class Packet
     {
-        private const int FormatBytes = 4;
+        public const int MaximumPacketSize = 2048;
 
         public HeaderProperty<Guid> Id { get; private set; }
-
         public HeaderProperty<Operation> Operation { get; private set; }
-
         public HeaderProperty<Status> Status { get; private set; }
-
         public HeaderProperty<Timestamp> Timestamp { get; set; }
-
         public HeaderProperty<int> DestinationId { get; private set; }
-
         public HeaderProperty<int> MessageLength { get; private set; }
-
         public HeaderProperty<string> Message { get; private set; }
-
-        public const int MaximumPacketSize = 2048;
 
         public Packet()
         {

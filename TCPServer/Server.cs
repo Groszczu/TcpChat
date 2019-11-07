@@ -16,7 +16,7 @@ namespace TCPServer
         private readonly ISessionsRepository _sessionsRepository;
         private readonly ICommandHandler _commandHandler;
         private readonly IClientIdsRepository _clientIdsRepository;
-        
+
         private readonly object _lock = new object();
         private TcpListener _server;
 
@@ -38,7 +38,6 @@ namespace TCPServer
         public void Run(string ip, int port)
         {
             _server = new TcpListener(IPAddress.Parse(ip), port);
-            _server.Start();
             Console.WriteLine("[SERVER CONSOLE]");
             while (!_shutDown)
             {
@@ -52,6 +51,7 @@ namespace TCPServer
             switch (tag)
             {
                 case "-s":
+                    _server.Start();
                     _connectionThread = new Thread(() =>
                     {
                         Thread.CurrentThread.IsBackground = true;
@@ -162,6 +162,11 @@ namespace TCPServer
                         lock (_lock)
                             command = new ServerSendMessage(source,
                                 _sessionsRepository, _packetFormatter, data.Message.Value);
+                        break;
+                    case Operation.CloseSession:
+                        lock (_lock)
+                            command = new ServerCloseAndOpenNewSessionCommand(source, _sessionsRepository,
+                                _packetFormatter);
                         break;
                     case Operation.Disconnect:
                         lock (_lock)
