@@ -19,6 +19,6 @@ namespace TCPServer.Services
         void RemoveClient(ClientData client);
         bool IsSessionFull(Guid sessionId);
 
-        void RemoveAllClients();
+        bool IsEmpty();
     }
 }

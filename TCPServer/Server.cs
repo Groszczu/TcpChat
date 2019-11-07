@@ -1,13 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net;
 using System.Net.Sockets;
-using System.Text;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Xml.Serialization;
 using Core;
 using TCPServer.Models;
 using TCPServer.Models.Commands;
@@ -20,61 +15,63 @@ namespace TCPServer
         private readonly IPacketFormatter _packetFormatter;
         private readonly ISessionsRepository _sessionsRepository;
         private readonly ICommandHandler _commandHandler;
+        private readonly IClientIdsRepository _clientIdsRepository;
+        
         private readonly object _lock = new object();
         private TcpListener _server;
 
         private Thread _connectionThread;
 
-        private bool _shutDown = false;
+        private bool _shutDown;
 
-        private static int _nextClientId = 1;
+        //private static int _nextClientId = 1;
 
         public Server(IPacketFormatter packetFormatter, ISessionsRepository sessionsRepository,
-            ICommandHandler commandHandler)
+            ICommandHandler commandHandler, IClientIdsRepository clientIdsRepository)
         {
             _packetFormatter = packetFormatter;
             _sessionsRepository = sessionsRepository;
             _commandHandler = commandHandler;
+            _clientIdsRepository = clientIdsRepository;
         }
 
         public void Run(string ip, int port)
         {
-            Console.WriteLine("[SERVER CONSOLE]");
             _server = new TcpListener(IPAddress.Parse(ip), port);
             _server.Start();
+            Console.WriteLine("[SERVER CONSOLE]");
             while (!_shutDown)
             {
                 var tag = Console.ReadLine();
-                switch (tag)
-                {
-                    case "-s":
-                        _connectionThread = new Thread(() =>
-                        {
-                            Thread.CurrentThread.IsBackground = true;
-                            HandleConnection();
-                        });
-                        _connectionThread.Start();
-                        break;
-                    case "-d":
-                        DisconnectAllClients();
-                        Console.WriteLine("Disconnected all clients");
-                        break;
-                    case "-q":
-                        // TODO: server disconnects all clients and quit correcly
-                        DisconnectAllClients();
-                        _server.Stop();
-                        if (_connectionThread != null && _connectionThread.IsAlive)
-                            _connectionThread.Join();
-                        DisconnectAllClientsAndQuit();
-                        break;
-                    case "-h":
-                        PrintHelp();
-                        break;
-                    default:
-                        Console.WriteLine("Invalid operation tag");
-                        Console.WriteLine("Enter '-h' to get help");
-                        break;
-                }
+                ProcessInput(tag);
+            }
+        }
+
+        private void ProcessInput(string tag)
+        {
+            switch (tag)
+            {
+                case "-s":
+                    _connectionThread = new Thread(() =>
+                    {
+                        Thread.CurrentThread.IsBackground = true;
+                        HandleConnection();
+                    });
+                    _connectionThread.Start();
+                    break;
+                case "-q":
+                    if (CanQuit())
+                        _shutDown = true;
+                    else
+                        Console.WriteLine("Cannot quit because clients are connected");
+                    break;
+                case "-h":
+                    PrintHelp();
+                    break;
+                default:
+                    Console.WriteLine("Invalid operation tag");
+                    Console.WriteLine("Enter '-h' to get help");
+                    break;
             }
         }
 
@@ -94,7 +91,7 @@ namespace TCPServer
                     return;
                 }
 
-                var newClientId = _nextClientId++;
+                var newClientId = _clientIdsRepository.NewClientId();
 
                 var newClientData = new ClientData(newClientId, newClient);
                 lock (_lock) _sessionsRepository.AddSessionRecord(newClientData, Guid.NewGuid());
@@ -121,7 +118,7 @@ namespace TCPServer
 
                 var receivedPacket = await _packetFormatter.DeserializeAsync(stream);
                 ProcessPacket(client, receivedPacket);
-                
+
                 if (client.ToClose)
                 {
                     stream.Close();
@@ -187,23 +184,16 @@ namespace TCPServer
             }
         }
 
-        private void DisconnectAllClients()
+        private bool CanQuit()
         {
             lock (_lock)
-                _sessionsRepository.RemoveAllClients();
-        }
-
-        private void DisconnectAllClientsAndQuit()
-        {
-            DisconnectAllClients();
-            Environment.Exit(0);
+                return _sessionsRepository.IsEmpty();
         }
 
         private void PrintHelp()
         {
             Console.WriteLine("Options:");
             Console.WriteLine($"{"-s",-20}start listening to clients");
-            Console.WriteLine($"{"-d",-20}disconnect all clients");
             Console.WriteLine($"{"-h",-20}open help menu");
             Console.WriteLine($"{"-q",-20}try to quit program");
         }

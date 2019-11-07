@@ -74,19 +74,6 @@ namespace TCPServer.Services
             client.ToClose = true;
         }
 
-        public bool IsSessionFull(Guid sessionId)
-        {
-            return GetNumberOfClientsInSession(sessionId) == 2;
-        }
-
-        public void RemoveAllClients()
-        {
-            foreach (var clientData in _sessions.Keys)
-            {
-                RemoveClient(clientData);
-            }
-        }
-
         public Guid GetSessionId(ClientData clientData)
         {
             if (!_sessions.ContainsKey(clientData))
@@ -102,6 +89,16 @@ namespace TCPServer.Services
                 throw new InvalidOperationException("Required client is not in the sessions repository");
 
             return searched;
+        }
+
+        public bool IsSessionFull(Guid sessionId)
+        {
+            return GetNumberOfClientsInSession(sessionId) == 2;
+        }
+
+        public bool IsEmpty()
+        {
+            return _sessions.Count == 0;
         }
     }
 }

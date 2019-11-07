@@ -45,6 +45,10 @@ namespace TCPServer.Models.Commands
             
             if (SessionsRepository.IsSessionFull(DestinationSessionId))
                 throw new InvalidOperationException($"Client's {Destination.Id} session is full");
+            
+            if (Destination.GotInviteFrom(Source.Id))
+                throw new InvalidOperationException(
+                    $"You already invited client with ID: {Destination.Id}");
 
             DestinationSessionId = SessionsRepository.GetSessionId(Destination);
             if (DestinationSessionId == _sourceSessionId)

@@ -101,6 +101,7 @@ namespace Core
 
         public Packet SetMessage(string message)
         {
+            message = message.Replace("|", "");
             Message = new HeaderProperty<string>(message, "message",
                 65536 + "message".Length + FormatBytes, true);
             var str = (string) Message.ObjectValue;
