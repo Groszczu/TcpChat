@@ -12,6 +12,8 @@ namespace TCPServer
 {
     public class Server
     {
+        private const int Port = 13000;
+        
         private readonly IPacketFormatter _packetFormatter;
         private readonly ISessionsRepository _sessionsRepository;
         private readonly ICommandHandler _commandHandler;
@@ -24,8 +26,6 @@ namespace TCPServer
 
         private bool _shutDown;
 
-        //private static int _nextClientId = 1;
-
         public Server(IPacketFormatter packetFormatter, ISessionsRepository sessionsRepository,
             ICommandHandler commandHandler, IClientIdsRepository clientIdsRepository)
         {
@@ -37,7 +37,8 @@ namespace TCPServer
 
         public void Run(string ip, int port)
         {
-            _server = new TcpListener(IPAddress.Parse(ip), port);
+            var localIpAddress = IPAddress.Parse(GetLocalIpAddress());
+            _server = new TcpListener(localIpAddress, port);
             Console.WriteLine("[SERVER CONSOLE]");
             while (!_shutDown)
             {
@@ -105,6 +106,19 @@ namespace TCPServer
                 }).Start();
             }
         }
+        
+       private static string GetLocalIpAddress()
+       {
+           var host = Dns.GetHostEntry(Dns.GetHostName());
+           foreach (var ip in host.AddressList)
+           {
+               if (ip.AddressFamily == AddressFamily.InterNetwork)
+               {
+                   return ip.ToString();
+               }
+           }
+           throw new Exception("No network adapters with an IPv4 address in the system");
+       } 
 
         private async Task ReceiveFromClient(object o)
         {
