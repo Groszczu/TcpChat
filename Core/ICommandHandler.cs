@@ -1,6 +1,4 @@
-﻿using System.Windows.Input;
-
-namespace Core
+﻿namespace Core
 {
     public interface ICommandHandler
     {

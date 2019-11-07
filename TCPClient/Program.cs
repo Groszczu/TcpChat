@@ -1,12 +1,11 @@
 ﻿using Core;
 using Microsoft.Extensions.DependencyInjection;
-using TCPClient.Services;
 
 namespace TCPClient
 {
     internal static class Program
     {
-        private static void Main(string[] args)
+        private static void Main()
         {
             // Create service collection and configure our services
             var services = ConfigureServices();

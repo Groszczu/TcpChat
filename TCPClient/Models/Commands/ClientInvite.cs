@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Net.Sockets;
 using Core;
 
 namespace TCPClient.Models.Commands

@@ -1,6 +1,4 @@
-﻿using System.IO;
-
-namespace Core
+﻿namespace Core
 {
     public interface ISender
     {

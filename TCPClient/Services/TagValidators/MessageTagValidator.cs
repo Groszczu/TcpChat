@@ -1,8 +1,6 @@
-﻿using System.Text.RegularExpressions;
-
-namespace TCPClient.Services.TagValidators
+﻿namespace TCPClient.Services.TagValidators
 {
-    public class MessageTagValidator : TagFollowedByValueValidator, ITagValidator
+    public class MessageTagValidator : TagFollowedByValueValidator
     {
         private const string MessageTag = "m";
         public MessageTagValidator() : base(MessageTag)

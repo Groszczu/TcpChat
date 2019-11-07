@@ -1,7 +1,4 @@
-﻿using System;
-using System.Text.RegularExpressions;
-
-namespace Core
+﻿namespace Core
 {
     public class HeaderProperty<T> : IHeaderProperty
     {
