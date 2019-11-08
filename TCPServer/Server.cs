@@ -246,9 +246,9 @@ namespace TCPServer
         private static void PrintHelp()
         {
             Console.WriteLine("Options:");
-            Console.WriteLine($"{"-s",-20}start listening");
             Console.WriteLine($"{"-h",-20}open help menu");
-            Console.WriteLine($"{"-q",-20}try to quit program");
+            Console.WriteLine($"{"-s",-20}start listening");
+            Console.WriteLine($"{"-q",-20}try to quit");
         }
     }
 }

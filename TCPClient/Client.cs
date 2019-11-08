@@ -219,14 +219,15 @@ namespace TCPClient
         private void PrintHelp()
         {
             Console.WriteLine("Options:");
+            Console.WriteLine($"{"-h",-20}open help menu");
             Console.WriteLine($"{"-cn [ipAddress:portNumber]",-20}try to connect to server with given IPv4 address and listening on given port");
             Console.WriteLine($"{"-id",-20}get your session ID and other client's IDs");
             Console.WriteLine($"{"-i [id]",-20}invite client with given ID to your session");
             Console.WriteLine($"{"-a [id]",-20}accept invite to other session from client with given ID");
             Console.WriteLine($"{"-d [id]",-20}decline invite to other session from client with given ID");
-            Console.WriteLine($"{"-dn",-20}disconnect form server");
+            Console.WriteLine($"{"-dn",-20}disconnect from server");
             Console.WriteLine($"{"-c",-20}close current session and go to new one (possible only if other client is in your session)");
-            Console.WriteLine($"{"-q",-20}quit program");
+            Console.WriteLine($"{"-q",-20}quit");
         }
     }
 }
