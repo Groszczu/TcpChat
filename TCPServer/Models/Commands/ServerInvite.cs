@@ -52,7 +52,7 @@ namespace TCPServer.Models.Commands
 
             DestinationSessionId = SessionsRepository.GetSessionId(Destination);
             if (DestinationSessionId == _sourceSessionId)
-                throw new InvalidOperationException("User you are inviting is already in your session");
+                throw new InvalidOperationException("Client you are inviting is already in your session");
         }
 
         protected override void GenerateAndSetMassage()

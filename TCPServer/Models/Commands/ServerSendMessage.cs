@@ -25,10 +25,8 @@ namespace TCPServer.Models.Commands
 
         private void ValidateAndInitializeDestination()
         {
-            if (SessionsRepository.GetNumberOfClientsInSession(_sourceSessionId) == 1)
+            if (!SessionsRepository.IsSessionFull(_sourceSessionId))
                 throw new InvalidOperationException("There is no other client in your session");
-            if (SessionsRepository.GetNumberOfClientsInSession(_sourceSessionId) != 2)
-                throw new InvalidOperationException("Error, try again");
             
             try
             {

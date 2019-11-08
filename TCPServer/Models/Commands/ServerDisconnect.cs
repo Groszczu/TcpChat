@@ -19,7 +19,7 @@ namespace TCPServer.Models.Commands
 
         protected override void GenerateAndSetMassage()
         {
-            var message = "Successfully disconnected from server";
+            const string message = "Successfully disconnected from server";
             Packet.SetMessage(message);
         }
     }
