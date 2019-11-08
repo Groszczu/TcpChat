@@ -12,8 +12,6 @@ namespace TCPServer
 {
     public class Server
     {
-        private const int Port = 13000;
-        
         private readonly IPacketFormatter _packetFormatter;
         private readonly ISessionsRepository _sessionsRepository;
         private readonly ICommandHandler _commandHandler;
@@ -21,6 +19,9 @@ namespace TCPServer
 
         private readonly object _lock = new object();
         private TcpListener _server;
+        private int _portNumber;
+        private string _ipAddressString;
+
 
         private Thread _connectionThread;
 
@@ -35,10 +36,13 @@ namespace TCPServer
             _clientIdsRepository = clientIdsRepository;
         }
 
-        public void Run(string ip, int port)
+        public void Run()
         {
-            var localIpAddress = IPAddress.Parse(GetLocalIpAddress());
-            _server = new TcpListener(localIpAddress, port);
+            var localIpAddress = TryToGetLocalIpAddress();
+            _ipAddressString = localIpAddress.ToString();
+            _portNumber = GetFreeTcpPort();
+            _server = new TcpListener(localIpAddress, _portNumber);
+
             Console.WriteLine("[SERVER CONSOLE]");
             while (!_shutDown)
             {
@@ -53,6 +57,8 @@ namespace TCPServer
             {
                 case "-s":
                     _server.Start();
+                    Console.WriteLine($"Server IP: {_ipAddressString}");
+                    Console.WriteLine($"Listening on port {_portNumber}");
                     _connectionThread = new Thread(() =>
                     {
                         Thread.CurrentThread.IsBackground = true;
@@ -106,19 +112,6 @@ namespace TCPServer
                 }).Start();
             }
         }
-        
-       private static string GetLocalIpAddress()
-       {
-           var host = Dns.GetHostEntry(Dns.GetHostName());
-           foreach (var ip in host.AddressList)
-           {
-               if (ip.AddressFamily == AddressFamily.InterNetwork)
-               {
-                   return ip.ToString();
-               }
-           }
-           throw new Exception("No network adapters with an IPv4 address in the system");
-       } 
 
         private async Task ReceiveFromClient(object o)
         {
@@ -129,17 +122,16 @@ namespace TCPServer
             {
                 var stream = client.Socket.GetStream();
 
-
                 var receivedPacket = await _packetFormatter.DeserializeAsync(stream);
                 ProcessPacket(client, receivedPacket);
 
-                if (client.ToClose)
-                {
-                    stream.Close();
-                    client.Socket.Close();
-                    Console.WriteLine($"Client {client.Id} disconnected successfully");
-                    break;
-                }
+                if (!client.ToClose)
+                    continue;
+
+                stream.Close();
+                client.Socket.Close();
+                Console.WriteLine($"Client {client.Id} disconnected successfully");
+                break;
             }
 
             Thread.CurrentThread.Join();
@@ -147,12 +139,12 @@ namespace TCPServer
 
         private void ProcessPacket(ClientData source, Packet data)
         {
-            ICommand command = null;
             Guid sourceSessionId;
             lock (_lock) sourceSessionId = _sessionsRepository.GetSessionId(source);
             var errorPacket = new Packet(data.Operation.Value, Status.Unauthorized, sourceSessionId);
             try
             {
+                ICommand command;
                 switch (data.Operation.Value)
                 {
                     case Operation.GetId:
@@ -186,6 +178,8 @@ namespace TCPServer
                         lock (_lock)
                             command = new ServerDisconnect(source, _sessionsRepository, _packetFormatter);
                         break;
+                    default:
+                        throw new ArgumentOutOfRangeException();
                 }
 
                 if (command != null)
@@ -203,13 +197,53 @@ namespace TCPServer
             }
         }
 
+        private static IPAddress TryToGetLocalIpAddress()
+        {
+            IPAddress localIpAddress;
+            try
+            {
+                localIpAddress = IPAddress.Parse(GetLocalIpAddress());
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+                throw;
+            }
+
+            return localIpAddress;
+        }
+
+        private static string GetLocalIpAddress()
+        {
+            var host = Dns.GetHostEntry(Dns.GetHostName());
+            foreach (var ip in host.AddressList)
+            {
+                if (ip.AddressFamily == AddressFamily.InterNetwork)
+                {
+                    return ip.ToString();
+                }
+            }
+
+            throw new Exception("No network adapters with an IPv4 address in the system");
+        }
+
+        private static int GetFreeTcpPort()
+        {
+            var listener = new TcpListener(IPAddress.Loopback, 0);
+            listener.Start();
+            var port = ((IPEndPoint) listener.LocalEndpoint).Port;
+            listener.Stop();
+            
+            return port;
+        }
+
         private bool CanQuit()
         {
             lock (_lock)
                 return _sessionsRepository.IsEmpty();
         }
 
-        private void PrintHelp()
+        private static void PrintHelp()
         {
             Console.WriteLine("Options:");
             Console.WriteLine($"{"-s",-20}start listening to clients");

@@ -7,13 +7,10 @@ namespace TCPClient
     {
         private static void Main()
         {
-            // Create service collection and configure our services
             var services = ConfigureServices();
-            // Generate a provider
             var serviceProvider = services.BuildServiceProvider();
 
-            // Kick off our actual code
-            serviceProvider.GetService<Client>().Run("127.0.0.1", 13000);
+            serviceProvider.GetService<Client>().Run();
         }
 
         private static IServiceCollection ConfigureServices()

@@ -19,9 +19,6 @@ namespace TCPClient
         private bool _disconnecting;
         private bool _quiting;
 
-        private IPAddress _ip;
-        private int _port;
-
         private NetworkStream _stream;
 
         private Thread _receivingThread;
@@ -32,11 +29,9 @@ namespace TCPClient
             _commandHandler = commandHandler;
         }
 
-        public void Run(string ip, int port)
+        public void Run()
         {
             Console.WriteLine("[CLIENT CONSOLE]");
-            _ip = IPAddress.Parse(ip);
-            _port = port;
             while (!_quiting)
             {
                 var tag = Console.ReadLine();
@@ -47,8 +42,8 @@ namespace TCPClient
         private void ProcessTag(string tag)
         {
             ICommand command = null;
-            
             ITagFollowedByValueValidator validator;
+
             if (new HelpTagValidator().Validate(tag))
             {
                 PrintHelp();
@@ -57,7 +52,10 @@ namespace TCPClient
 
             if (new ConnectionTagValidator().Validate(tag))
             {
-                TryToConnect();
+                var connectionTagValidator = new ConnectionTagValidator();
+                var ipAddress = connectionTagValidator.GetIpAddress(tag);
+                var portNumber = connectionTagValidator.GetPortNumber(tag);
+                TryToConnect(ipAddress, portNumber);
                 return;
             }
 
@@ -73,51 +71,46 @@ namespace TCPClient
                     _quiting = true;
                     QuitProgram();
                 }
-
             }
 
             if (!_client.Connected)
             {
-                PrintConnectionRequest();
+                PrintInvalidInputOrConnectionRequiredMessage();
                 return;
             }
 
             if (new IdTagValidator().Validate(tag))
+            {
                 command = new ClientGetId(_sessionId, _byteSender, _packetFormatter);
-
-            if ((validator = new InviteTagValidator()).Validate(tag))
+            }
+            else if ((validator = new InviteTagValidator()).Validate(tag))
             {
                 var destinationId = int.Parse(validator.GetMatchedValue(tag));
                 command = new ClientInvite(destinationId, _sessionId, _byteSender,
                     _packetFormatter);
             }
-
-            if ((validator = new AcceptTagValidator()).Validate(tag))
+            else if ((validator = new AcceptTagValidator()).Validate(tag))
             {
                 var destinationId = int.Parse(validator.GetMatchedValue(tag));
                 command = new ClientAcceptInvite(destinationId, _sessionId, _byteSender,
                     _packetFormatter);
             }
-
-            if ((validator = new DeclineTagValidator()).Validate(tag))
+            else if ((validator = new DeclineTagValidator()).Validate(tag))
             {
                 var destinationId = int.Parse(validator.GetMatchedValue(tag));
                 command = new ClientDeclineInvite(destinationId, _sessionId, _byteSender,
                     _packetFormatter);
             }
-
-            if ((validator = new MessageTagValidator()).Validate(tag))
+            else if ((validator = new MessageTagValidator()).Validate(tag))
             {
                 var messageToSend = validator.GetMatchedValue(tag);
                 command = new ClientSendMessage(_sessionId, _byteSender, _packetFormatter, messageToSend);
             }
-
-            if (new CloseTagValidator().Validate(tag))
+            else if (new CloseTagValidator().Validate(tag))
             {
                 command = new ClientCloseAndOpenNewSessionCommand(_sessionId, _byteSender, _packetFormatter);
             }
-
-            if (new DisconnectTagValidator().Validate(tag))
+            else if (new DisconnectTagValidator().Validate(tag))
             {
                 command = new ClientDisconnect(_sessionId, _byteSender, _packetFormatter);
                 _disconnecting = true;
@@ -133,14 +126,14 @@ namespace TCPClient
             }
         }
 
-        private void TryToConnect(int maxAttempts = 3)
+        private void TryToConnect(IPAddress ipAddress, int portNumber, int maxAttempts = 3)
         {
             if (_client.Connected)
             {
                 Console.WriteLine("You are connected to server");
                 return;
             }
-            
+
             _client = new TcpClient();
             var attempt = 0;
             while (!_client.Connected && ++attempt <= maxAttempts)
@@ -148,7 +141,7 @@ namespace TCPClient
                 try
                 {
                     Console.WriteLine("Connecting to the server...");
-                    _client.Connect(_ip, _port);
+                    _client.Connect(ipAddress, portNumber);
                 }
                 catch (SocketException)
                 {
@@ -187,6 +180,7 @@ namespace TCPClient
                     _disconnecting = false;
                     break;
                 }
+
                 var receivedPacket = await _packetFormatter.DeserializeAsync(_stream);
                 ProcessPacket(receivedPacket);
             }
@@ -210,12 +204,13 @@ namespace TCPClient
             Environment.Exit(0);
         }
 
-        private void PrintConnectionRequest()
+        private static void PrintInvalidInputOrConnectionRequiredMessage()
         {
-            Console.WriteLine("Please connect to the server first");
+            PrintInvalidInputMessage();
+            Console.WriteLine("[Or connection required to process this tag]");
         }
 
-        private void PrintInvalidInputMessage()
+        private static void PrintInvalidInputMessage()
         {
             Console.WriteLine("Invalid input");
             Console.WriteLine("Enter '-h' to get help");
