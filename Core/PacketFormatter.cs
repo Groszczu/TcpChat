@@ -74,7 +74,7 @@ namespace Core
             return packet;
         }
 
-        private string MakeHeaderPeace(string key, string value)
+        private static string MakeHeaderPeace(string key, string value)
         {
             return new string($"{key}-){value}(|");
         }
