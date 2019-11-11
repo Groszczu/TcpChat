@@ -41,7 +41,7 @@ namespace TCPClient
 
         private void ProcessTag(string tag)
         {
-            ICommand command = null;
+            ClientCommand command = null;
             ITagFollowedByValueValidator validator;
 
             if (new HelpTagValidator().Validate(tag))
@@ -79,43 +79,46 @@ namespace TCPClient
                 return;
             }
 
-            if (new IdTagValidator().Validate(tag))
+            int destinationId;
+            switch (tag)
             {
-                command = new ClientGetId(_sessionId, _byteSender, _packetFormatter);
+                case var input when new IdTagValidator().Validate(input):
+                    command = new ClientGetId(_sessionId, _byteSender, _packetFormatter);
+                    break;
+                
+                case var input when (validator = new InviteTagValidator()).Validate(input):
+                    destinationId = int.Parse(validator.GetMatchedValue(tag));
+                    command = new ClientInvite(destinationId, _sessionId, _byteSender,
+                        _packetFormatter);
+                    break;
+                
+                case var input when (validator = new AcceptTagValidator()).Validate(input):
+                    destinationId = int.Parse(validator.GetMatchedValue(tag));
+                    command = new ClientAcceptInvite(destinationId, _sessionId, _byteSender,
+                        _packetFormatter);
+                    break;
+                
+                case var input when (validator = new DeclineTagValidator()).Validate(input):
+                    destinationId = int.Parse(validator.GetMatchedValue(tag));
+                    command = new ClientDeclineInvite(destinationId, _sessionId, _byteSender,
+                        _packetFormatter);
+                    break;
+                
+                case var input when (validator = new MessageTagValidator()).Validate(input):
+                    var messageToSend = validator.GetMatchedValue(tag);
+                    command = new ClientSendMessage(_sessionId, _byteSender, _packetFormatter, messageToSend);
+                    break;
+                
+                case var input when new CloseTagValidator().Validate(input):
+                    command = new ClientCloseAndOpenNewSessionCommand(_sessionId, _byteSender, _packetFormatter);
+                    break;
+                
+                case var input when new DisconnectTagValidator().Validate(input):
+                    command = new ClientDisconnect(_sessionId, _byteSender, _packetFormatter);
+                    _disconnecting = true;
+                    break;
             }
-            else if ((validator = new InviteTagValidator()).Validate(tag))
-            {
-                var destinationId = int.Parse(validator.GetMatchedValue(tag));
-                command = new ClientInvite(destinationId, _sessionId, _byteSender,
-                    _packetFormatter);
-            }
-            else if ((validator = new AcceptTagValidator()).Validate(tag))
-            {
-                var destinationId = int.Parse(validator.GetMatchedValue(tag));
-                command = new ClientAcceptInvite(destinationId, _sessionId, _byteSender,
-                    _packetFormatter);
-            }
-            else if ((validator = new DeclineTagValidator()).Validate(tag))
-            {
-                var destinationId = int.Parse(validator.GetMatchedValue(tag));
-                command = new ClientDeclineInvite(destinationId, _sessionId, _byteSender,
-                    _packetFormatter);
-            }
-            else if ((validator = new MessageTagValidator()).Validate(tag))
-            {
-                var messageToSend = validator.GetMatchedValue(tag);
-                command = new ClientSendMessage(_sessionId, _byteSender, _packetFormatter, messageToSend);
-            }
-            else if (new CloseTagValidator().Validate(tag))
-            {
-                command = new ClientCloseAndOpenNewSessionCommand(_sessionId, _byteSender, _packetFormatter);
-            }
-            else if (new DisconnectTagValidator().Validate(tag))
-            {
-                command = new ClientDisconnect(_sessionId, _byteSender, _packetFormatter);
-                _disconnecting = true;
-            }
-            
+
             if (command != null)
             {
                 _commandHandler.Handle(command);
@@ -155,17 +158,17 @@ namespace TCPClient
                 _stream = _client.GetStream();
                 _byteSender = new ByteSender(_stream);
 
-                _receivingThread = new Thread(() =>
+                _receivingThread = new Thread(async () =>
                 {
                     Thread.CurrentThread.IsBackground = true;
-                    ReceiveAndPrint().GetAwaiter().GetResult();
+                    await ReceiveAndPrint();
                 });
 
                 _receivingThread.Start();
             }
             else
             {
-                Console.WriteLine($"Filed to connect");
+                Console.WriteLine("Filed to connect");
             }
         }
 
@@ -181,7 +184,19 @@ namespace TCPClient
                     break;
                 }
 
-                var receivedPacket = await _packetFormatter.DeserializeAsync(_stream);
+                Packet receivedPacket;
+                try
+                {
+                    receivedPacket = await _packetFormatter.DeserializeAsync(_stream);
+                }
+                catch (Exception)
+                {
+                    Console.WriteLine("Server was forcibly closed");
+                    _stream.Close();
+                    _client.Close();
+                    break;
+                }
+
                 ProcessPacket(receivedPacket);
             }
         }
@@ -220,13 +235,15 @@ namespace TCPClient
         {
             Console.WriteLine("Options:");
             Console.WriteLine($"{"-h",-20}open help menu");
-            Console.WriteLine($"{"-cn [ipAddress:portNumber]",-20}try to connect to server with given IPv4 address and listening on given port");
+            Console.WriteLine(
+                $"{"-cn [ipAddress:portNumber]",-20}try to connect to server with given IPv4 address and listening on given port");
             Console.WriteLine($"{"-id",-20}get your session ID and other client's IDs");
             Console.WriteLine($"{"-i [id]",-20}invite client with given ID to your session");
             Console.WriteLine($"{"-a [id]",-20}accept invite to other session from client with given ID");
             Console.WriteLine($"{"-d [id]",-20}decline invite to other session from client with given ID");
             Console.WriteLine($"{"-dn",-20}disconnect from server");
-            Console.WriteLine($"{"-c",-20}close current session and go to new one (possible only if other client is in your session)");
+            Console.WriteLine(
+                $"{"-c",-20}close current session and go to new one (possible only if other client is in your session)");
             Console.WriteLine($"{"-q",-20}quit");
         }
     }

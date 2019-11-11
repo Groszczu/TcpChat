@@ -29,7 +29,7 @@ namespace TCPServer.Models.Commands
         {
             var newSessionId = SessionsRepository.GetSessionId(Destination);
 
-            var message = $"You got moved to the new session '{newSessionId}'";
+            var message = $"You were moved to the new session '{newSessionId}'";
             Packet.SetMessage(message);
         }
     }

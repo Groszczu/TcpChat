@@ -59,10 +59,10 @@ namespace TCPServer
                     _server.Start();
                     Console.WriteLine($"Server IP: {_ipAddressString}");
                     Console.WriteLine($"Listening on port {_portNumber}");
-                    _connectionThread = new Thread(() =>
+                    _connectionThread = new Thread(async () =>
                     {
                         Thread.CurrentThread.IsBackground = true;
-                        HandleConnection();
+                        await HandleConnection();
                     });
                     _connectionThread.Start();
                     break;
@@ -82,7 +82,7 @@ namespace TCPServer
             }
         }
 
-        private void HandleConnection()
+        private async Task HandleConnection()
         {
             while (!_shutDown)
             {
@@ -90,25 +90,26 @@ namespace TCPServer
                 TcpClient newClient;
                 try
                 {
-                    newClient = _server.AcceptTcpClient();
+                    newClient = await _server.AcceptTcpClientAsync();
                 }
                 catch (SocketException)
                 {
-                    Console.WriteLine("Stopped waiting for connections");
+                    Console.WriteLine("Forcibly stopped waiting for connections");
                     return;
                 }
 
                 var newClientId = _clientIdsRepository.NewClientId();
 
                 var newClientData = new ClientData(newClientId, newClient);
-                lock (_lock) _sessionsRepository.AddSessionRecord(newClientData, Guid.NewGuid());
+                lock (_lock)
+                    _sessionsRepository.AddSessionRecord(newClientData, Guid.NewGuid());
 
 
                 Console.WriteLine($"Connected with client {newClientId}");
-                new Thread(() =>
+                new Thread(async () =>
                 {
                     Thread.CurrentThread.IsBackground = true;
-                    ReceiveFromClient(newClientData).GetAwaiter().GetResult();
+                    await ReceiveFromClient(newClientData);
                 }).Start();
             }
         }
@@ -118,23 +119,30 @@ namespace TCPServer
             if (!(o is ClientData client))
                 throw new ArgumentException("Passed object is not ClientData type");
 
+            var stream = client.Socket.GetStream();
             while (true)
             {
-                var stream = client.Socket.GetStream();
+                Packet receivedPacket;
+                try
+                {
+                    receivedPacket = await _packetFormatter.DeserializeAsync(stream);
+                }
+                catch (Exception)
+                {
+                    Console.WriteLine($"Connection with client {client.Id} was forcibly closed");
+                    EndConnection(client, stream);
+                    break;
+                }
 
-                var receivedPacket = await _packetFormatter.DeserializeAsync(stream);
                 ProcessPacket(client, receivedPacket);
 
                 if (!client.ToClose)
                     continue;
 
-                stream.Close();
-                client.Socket.Close();
+                EndConnection(client, stream);
                 Console.WriteLine($"Client {client.Id} disconnected successfully");
                 break;
             }
-
-            Thread.CurrentThread.Join();
         }
 
         private void ProcessPacket(ClientData source, Packet data)
@@ -144,50 +152,35 @@ namespace TCPServer
             var errorPacket = new Packet(data.Operation.Value, Status.Unauthorized, sourceSessionId);
             try
             {
-                ICommand command;
-                switch (data.Operation.Value)
-                {
-                    case Operation.GetId:
-                        lock (_lock)
-                            command = new ServerGetId(source, _sessionsRepository, _packetFormatter);
-                        break;
-                    case Operation.Invite:
-                        lock (_lock)
-                            command = data.Status.Value switch
-                            {
-                                Status.Ok => new ServerInvite(source, data.DestinationId.Value, _sessionsRepository,
-                                    _packetFormatter),
-                                Status.Accept => new ServerAcceptInvite(source, data.DestinationId.Value,
-                                    _sessionsRepository, _packetFormatter),
-                                Status.Decline => new ServerDeclineInvite(source, data.DestinationId.Value,
-                                    _sessionsRepository, _packetFormatter),
-                                _ => (ICommand) null
-                            };
-                        break;
-                    case Operation.Message:
-                        lock (_lock)
-                            command = new ServerSendMessage(source,
-                                _sessionsRepository, _packetFormatter, data.Message.Value);
-                        break;
-                    case Operation.CloseSession:
-                        lock (_lock)
-                            command = new ServerCloseAndOpenNewSessionCommand(source, _sessionsRepository,
-                                _packetFormatter);
-                        break;
-                    case Operation.Disconnect:
-                        lock (_lock)
-                            command = new ServerDisconnect(source, _sessionsRepository, _packetFormatter);
-                        break;
-                    default:
-                        throw new ArgumentOutOfRangeException();
-                }
+                ServerCommand command;
+                lock (_lock)
+                    command = data.Operation.Value switch
+                    {
+                        Operation.GetId => new ServerGetId(source, _sessionsRepository, _packetFormatter),
+                        Operation.Invite => (data.Status.Value switch
+                        {
+                            Status.Ok => new ServerInvite(source, data.DestinationId.Value, _sessionsRepository,
+                                _packetFormatter),
+                            Status.Accept => new ServerAcceptInvite(source, data.DestinationId.Value,
+                                _sessionsRepository, _packetFormatter),
+                            Status.Decline => new ServerDeclineInvite(source, data.DestinationId.Value,
+                                _sessionsRepository, _packetFormatter),
+                            _ => (ICommand) null
+                        }),
+                        Operation.Message => new ServerSendMessage(source, _sessionsRepository, _packetFormatter,
+                            data.Message.Value),
+                        Operation.CloseSession => new ServerCloseAndOpenNewSessionCommand(source, _sessionsRepository,
+                            _packetFormatter),
+                        Operation.Disconnect => new ServerDisconnect(source, _sessionsRepository, _packetFormatter),
+                        _ => throw new ArgumentOutOfRangeException()
+                    } as ServerCommand;
 
                 if (command != null)
                     _commandHandler.Handle(command);
             }
             catch (InvalidOperationException exception)
             {
-                Console.WriteLine(exception.Message);
+                Console.WriteLine($"Error message sent to client {source.Id}: \"{exception.Message}\"");
                 errorPacket.SetMessage(exception.Message);
             }
 
@@ -204,13 +197,22 @@ namespace TCPServer
             {
                 localIpAddress = IPAddress.Parse(GetLocalIpAddress());
             }
-            catch (Exception e)
+            catch (Exception exception)
             {
-                Console.WriteLine(e.Message);
+                Console.WriteLine(exception.Message);
                 throw;
             }
 
             return localIpAddress;
+        }
+
+        private void EndConnection(ClientData client, NetworkStream stream)
+        {
+            lock (_lock)
+                _sessionsRepository.RemoveClient(client);
+
+            stream.Close();
+            client.Socket.Close();
         }
 
         private static string GetLocalIpAddress()
@@ -233,7 +235,7 @@ namespace TCPServer
             listener.Start();
             var port = ((IPEndPoint) listener.LocalEndpoint).Port;
             listener.Stop();
-            
+
             return port;
         }
 
