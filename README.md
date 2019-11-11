@@ -14,11 +14,11 @@ Server application can serve multiple clients, but maximum number of participato
 | Tag | Operation |
 | --- | --- |
 |-h|														open help menu|  
-|-cn [ip_address:port_number]| 		try to connect to server with given IPv4 address and listening on given port | 
+|-cn [ip_address:port_number]| 	try to connect to server with given IPv4 address and listening on given port | 
 |-id| 													get your session ID and other client's IDs | 
 |-i [id]|												invite client with given ID to your session | 
 |-a [id]|												accept invite to other session from client with given ID | 
 |-d [id]|												decline invite to other session from client with given ID | 
 |-dn|														disconnect from server | 
-|-c|														close current session and move to new one (possible only if other client is in your session | 
+|-c|														close current session and move to new one (possible only if other client is in your session) | 
 |-q|														quit (disconnect if connected) | 
