@@ -68,7 +68,6 @@ namespace TCPClient
                 }
                 else
                 {
-                    _quiting = true;
                     QuitProgram();
                 }
             }
@@ -206,15 +205,15 @@ namespace TCPClient
             Console.WriteLine(data.Message.Value);
             if (data.Status.Value == Status.Unauthorized)
                 return;
-            if (data.Operation.Value == Operation.GetId)
-            {
+            
+            if (_sessionId == Guid.Empty)
                 _sessionId = data.Id.Value;
-            }
-            else if (_quiting && data.Operation.Value == Operation.Disconnect)
+            
+            if (_quiting && data.Operation.Value == Operation.Disconnect)
                 QuitProgram();
         }
 
-        private void QuitProgram()
+        private static void QuitProgram()
         {
             Environment.Exit(0);
         }
@@ -231,7 +230,7 @@ namespace TCPClient
             Console.WriteLine("Enter '-h' to get help");
         }
 
-        private void PrintHelp()
+        private static void PrintHelp()
         {
             Console.WriteLine("Options:");
             Console.WriteLine($"{"-h",-20}open help menu");

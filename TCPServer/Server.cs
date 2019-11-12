@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
@@ -172,7 +173,7 @@ namespace TCPServer
                         Operation.CloseSession => new ServerCloseAndOpenNewSessionCommand(source, _sessionsRepository,
                             _packetFormatter),
                         Operation.Disconnect => new ServerDisconnect(source, _sessionsRepository, _packetFormatter),
-                        _ => throw new ArgumentOutOfRangeException()
+                        _ => (ICommand) null
                     } as ServerCommand;
 
                 if (command != null)
@@ -185,9 +186,7 @@ namespace TCPServer
             }
 
             if (errorPacket.Message.IsSet)
-            {
                 source.SendTo(_packetFormatter.Serialize(errorPacket));
-            }
         }
 
         private static IPAddress TryToGetLocalIpAddress()
@@ -206,7 +205,7 @@ namespace TCPServer
             return localIpAddress;
         }
 
-        private void EndConnection(ClientData client, NetworkStream stream)
+        private void EndConnection(ClientData client, Stream stream)
         {
             lock (_lock)
                 _sessionsRepository.RemoveClient(client);

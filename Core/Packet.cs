@@ -10,7 +10,7 @@ namespace Core
         public HeaderProperty<Guid> Id { get; private set; }
         public HeaderProperty<Operation> Operation { get; private set; }
         public HeaderProperty<Status> Status { get; private set; }
-        public HeaderProperty<Timestamp> Timestamp { get; set; }
+        private HeaderProperty<Timestamp> Timestamp { get; set; }
         public HeaderProperty<int> DestinationId { get; private set; }
         public HeaderProperty<int> MessageLength { get; private set; }
         public HeaderProperty<string> Message { get; private set; }
@@ -90,7 +90,7 @@ namespace Core
             return this;
         }
 
-        private void RemoveForbiddenSigns(ref string message)
+        private static void RemoveForbiddenSigns(ref string message)
         {
             message = message.Replace("|", "");
         }

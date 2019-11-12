@@ -15,7 +15,7 @@ namespace Core
             Value = unixTimestamp;
         }
         
-        private int CalculateTimestamp(DateTime date)
+        private static int CalculateTimestamp(DateTime date)
         {
             return (int) date.Subtract(new DateTime(1970, 1, 1)).TotalSeconds;
         }

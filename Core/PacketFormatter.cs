@@ -13,7 +13,7 @@ namespace Core
             var stringBuilder = new StringBuilder();
             foreach (var property in packet.GetSetProperties())
             {
-                stringBuilder.Append(MakeHeaderPeace(property.Key, property.ObjectValue.ToString()));
+                stringBuilder.Append(MakeHeaderPiece(property.Key, property.ObjectValue.ToString()));
             }
 
             return Encoding.UTF8.GetBytes(stringBuilder.ToString());
@@ -74,7 +74,7 @@ namespace Core
             return packet;
         }
 
-        private static string MakeHeaderPeace(string key, string value)
+        private static string MakeHeaderPiece(string key, string value)
         {
             return new string($"{key}-){value}(|");
         }
