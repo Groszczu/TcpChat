@@ -102,11 +102,17 @@ namespace TCPServer
                 var newClientId = _clientIdsRepository.NewClientId();
 
                 var newClientData = new ClientData(newClientId, newClient);
+                var newClientSessionId = Guid.NewGuid();
                 lock (_lock)
-                    _sessionsRepository.AddSessionRecord(newClientData, Guid.NewGuid());
+                    _sessionsRepository.AddSessionRecord(newClientData, newClientSessionId);
 
 
                 Console.WriteLine($"Connected with client {newClientId}");
+                
+                var initialPacket = new Packet(Operation.GetId, Status.Initial, newClientSessionId)
+                    .SetDestinationId(newClientId);
+                newClientData.SendTo(_packetFormatter.Serialize(initialPacket));
+                
                 new Thread(async () =>
                 {
                     Thread.CurrentThread.IsBackground = true;
@@ -151,12 +157,6 @@ namespace TCPServer
             try
             {
                 ServerCommand command;
-                if (data.Operation.Value == Operation.Message)
-                {
-                    lock (_lock)
-                        command = new ServerSendMessage(source, _sessionsRepository, _packetFormatter, data.Message.Value);
-                }
-                else
                 lock (_lock)
                     command = data.Operation.Value switch
                     {

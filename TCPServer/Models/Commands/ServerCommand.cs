@@ -12,8 +12,8 @@ namespace TCPServer.Models.Commands
         protected ClientData Destination;
         protected Guid DestinationSessionId;
         protected readonly ISessionsRepository SessionsRepository;
+        protected readonly IPacketFormatter PacketFormatter;
         
-        private readonly IPacketFormatter _packetFormatter;
         private readonly Operation _operation;
         private readonly Status _status;
 
@@ -22,7 +22,7 @@ namespace TCPServer.Models.Commands
         {
             Source = source;
             SessionsRepository = sessionsRepository;
-            _packetFormatter = packetFormatter;
+            PacketFormatter = packetFormatter;
             _operation = operation;
             _status = status;
         }
@@ -37,7 +37,7 @@ namespace TCPServer.Models.Commands
             Packet = new Packet(_operation, _status, DestinationSessionId);
             SetPacketFields();
             
-            var serializedPacket = _packetFormatter.Serialize(Packet);
+            var serializedPacket = PacketFormatter.Serialize(Packet);
             Destination.SendTo(serializedPacket);
         }
     }

@@ -5,6 +5,7 @@
         Ok,
         Accept,
         Decline,
-        Unauthorized
+        Unauthorized,
+        Initial
     }
 }

@@ -204,10 +204,6 @@ namespace TCPClient
 
         private void ProcessPacket(Packet data)
         {
-            SetSessionId(data.Id.Value);
-            if (_id == -1 && data.DestinationId.IsSet)
-                SetId(data.DestinationId.Value);
-            
             var messageToPrint = new StringBuilder();
             if (data.Status.Value == Status.Unauthorized)
                 messageToPrint.Append("Attempted to perform unauthorized operation");
@@ -215,7 +211,11 @@ namespace TCPClient
                 switch (data.Operation.Value)
                 {
                     case Operation.GetId:
+                        UpdateSessionAndClientIds(data.Id.Value, data.DestinationId.Value);
                         messageToPrint.Append($"Your ID: {_id}, your session ID: '{data.Id.Value}'\n");
+
+                        if (data.Status.Value == Status.Initial)
+                            break;
                         if (data.Message.IsSet)
                             messageToPrint.Append("Other client's IDs: ").Append(data.Message.Value);
                         else
@@ -262,10 +262,10 @@ namespace TCPClient
                 Console.WriteLine(messageToPrint.ToString());
         }
 
-        private void SetSessionId(Guid sessionId)
+        private void UpdateSessionAndClientIds(Guid sessionId, int clientId)
         {
-            if (sessionId != Guid.Empty)
-                _sessionId = sessionId;
+            _sessionId = sessionId;
+            _id = clientId;
         }
 
         private void SetId(int id)
