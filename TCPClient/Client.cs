@@ -212,14 +212,15 @@ namespace TCPClient
                 {
                     case Operation.GetId:
                         UpdateSessionAndClientIds(data.Id.Value, data.DestinationId.Value);
-                        messageToPrint.Append($"Your ID: {_id}, your session ID: '{_sessionId}'\n");
+                        messageToPrint.Append($"Your ID: {_id}, your session ID: '{_sessionId}'");
 
                         if (data.Status.Value == Status.Initial)
                             break;
                         if (data.Message.IsSet)
-                            messageToPrint.Append("Other client's IDs: ").Append(data.Message.Value);
+                            messageToPrint.Append("\nOther client's IDs: ").Append(data.Message.Value
+                                .Replace(";", ", "));
                         else
-                            messageToPrint.Append("No other clients connected");
+                            messageToPrint.Append("\nNo other clients connected");
                         break;
                     case Operation.Invite:
                         switch (data.Status.Value)

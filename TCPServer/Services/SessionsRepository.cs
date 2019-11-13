@@ -51,7 +51,7 @@ namespace TCPServer.Services
             foreach (var clientData in otherClients)
             {
                 result.Append(delimiter + clientData.Id);
-                delimiter = ", ";
+                delimiter = ";";
             }
 
             return result.ToString();
