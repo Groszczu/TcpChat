@@ -23,6 +23,11 @@ namespace TCPServer.Models.Commands
             ValidateAndInitializeSessionIds();
         }
 
+        protected override void SetPacketFields()
+        {
+            Packet.SetSourceId(Source.Id);
+        }
+
         private void ValidateAndInitializeDestinationId()
         {
             try
@@ -38,27 +43,21 @@ namespace TCPServer.Models.Commands
         private void ValidateAndInitializeSessionIds()
         {
             if (Destination == Source)
-                throw new InvalidOperationException("You cannot invite yourself to the session");
+                throw new InvalidOperationException("Client cannot invite himself to the session");
 
             if (SessionsRepository.IsSessionFull(_sourceSessionId))
-                throw new InvalidOperationException("Your session is full");
+                throw new InvalidOperationException("Session is full");
             
             if (SessionsRepository.IsSessionFull(DestinationSessionId))
                 throw new InvalidOperationException($"Client's {Destination.Id} session is full");
             
             if (Destination.GotInviteFrom(Source.Id))
                 throw new InvalidOperationException(
-                    $"You already invited client with ID: {Destination.Id}");
+                    $"Already invited client with ID: {Destination.Id}");
 
             DestinationSessionId = SessionsRepository.GetSessionId(Destination);
             if (DestinationSessionId == _sourceSessionId)
-                throw new InvalidOperationException("Client you are inviting is already in your session");
-        }
-
-        protected override void GenerateAndSetMassage()
-        {
-            var message = $"You (client {Destination.Id}) got invite from client {Source.Id} to session {_sourceSessionId}";
-            Packet.SetMessage(message);
+                throw new InvalidOperationException("Invited client is already in this session");
         }
 
         public override void Execute()

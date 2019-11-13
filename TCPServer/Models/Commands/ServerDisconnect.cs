@@ -16,11 +16,5 @@ namespace TCPServer.Models.Commands
             DestinationSessionId = SessionsRepository.GetSessionId(Destination);
             SessionsRepository.RemoveClient(Destination);
         }
-
-        protected override void GenerateAndSetMassage()
-        {
-            const string message = "Successfully disconnected from server";
-            Packet.SetMessage(message);
-        }
     }
 }

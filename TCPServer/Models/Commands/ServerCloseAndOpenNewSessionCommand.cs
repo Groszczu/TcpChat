@@ -15,7 +15,7 @@ namespace TCPServer.Models.Commands
         protected override void ValidateAndInitializeCommandArguments()
         {
             Destination = Source;
-            DestinationSessionId = SessionsRepository.GetSessionId(Source);
+            DestinationSessionId = SessionsRepository.GetSessionId(Destination);
 
             // source is only client in session
             if (!SessionsRepository.IsSessionFull(DestinationSessionId))
@@ -23,14 +23,9 @@ namespace TCPServer.Models.Commands
                     "Closing communication session and moving to new one is possible only if other client is in your session");
             
             SessionsRepository.UpdateClientSessionId(Destination, Guid.NewGuid());
+            DestinationSessionId = SessionsRepository.GetSessionId(Destination);
         }
-
-        protected override void GenerateAndSetMassage()
-        {
-            var newSessionId = SessionsRepository.GetSessionId(Destination);
-
-            var message = $"You were moved to the new session '{newSessionId}'";
-            Packet.SetMessage(message);
-        }
+        
+        
     }
 }

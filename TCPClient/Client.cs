@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Net;
 using System.Net.Sockets;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Core;
@@ -15,6 +16,7 @@ namespace TCPClient
         private readonly ICommandHandler _commandHandler;
         private ISender _byteSender;
         private TcpClient _client = new TcpClient();
+        private int _id = -1;
         private Guid _sessionId = Guid.Empty;
         private bool _disconnecting;
         private bool _quiting;
@@ -84,34 +86,34 @@ namespace TCPClient
                 case var input when new IdTagValidator().Validate(input):
                     command = new ClientGetId(_sessionId, _byteSender, _packetFormatter);
                     break;
-                
+
                 case var input when (validator = new InviteTagValidator()).Validate(input):
                     destinationId = int.Parse(validator.GetMatchedValue(tag));
                     command = new ClientInvite(destinationId, _sessionId, _byteSender,
                         _packetFormatter);
                     break;
-                
+
                 case var input when (validator = new AcceptTagValidator()).Validate(input):
                     destinationId = int.Parse(validator.GetMatchedValue(tag));
                     command = new ClientAcceptInvite(destinationId, _sessionId, _byteSender,
                         _packetFormatter);
                     break;
-                
+
                 case var input when (validator = new DeclineTagValidator()).Validate(input):
                     destinationId = int.Parse(validator.GetMatchedValue(tag));
                     command = new ClientDeclineInvite(destinationId, _sessionId, _byteSender,
                         _packetFormatter);
                     break;
-                
+
                 case var input when (validator = new MessageTagValidator()).Validate(input):
                     var messageToSend = validator.GetMatchedValue(tag);
                     command = new ClientSendMessage(_sessionId, _byteSender, _packetFormatter, messageToSend);
                     break;
-                
+
                 case var input when new CloseTagValidator().Validate(input):
                     command = new ClientCloseAndOpenNewSessionCommand(_sessionId, _byteSender, _packetFormatter);
                     break;
-                
+
                 case var input when new DisconnectTagValidator().Validate(input):
                     command = new ClientDisconnect(_sessionId, _byteSender, _packetFormatter);
                     _disconnecting = true;
@@ -202,15 +204,73 @@ namespace TCPClient
 
         private void ProcessPacket(Packet data)
         {
-            Console.WriteLine(data.Message.Value);
+            SetSessionId(data.Id.Value);
+            if (_id == -1 && data.DestinationId.IsSet)
+                SetId(data.DestinationId.Value);
+            
+            var messageToPrint = new StringBuilder();
             if (data.Status.Value == Status.Unauthorized)
-                return;
-            
-            if (_sessionId == Guid.Empty)
-                _sessionId = data.Id.Value;
-            
-            if (_quiting && data.Operation.Value == Operation.Disconnect)
-                QuitProgram();
+                messageToPrint.Append("Attempted to perform unauthorized operation");
+            else
+                switch (data.Operation.Value)
+                {
+                    case Operation.GetId:
+                        messageToPrint.Append($"Your ID: {_id}, your session ID: '{data.Id.Value}'\n");
+                        if (data.Message.IsSet)
+                            messageToPrint.Append("Other client's IDs: ").Append(data.Message.Value);
+                        else
+                            messageToPrint.Append("No other clients connected");
+                        break;
+                    case Operation.Invite:
+                        switch (data.Status.Value)
+                        {
+                            case Status.Ok:
+                                messageToPrint.Append($"You got invited by client with ID: {data.SourceId.Value}");
+                                break;
+                            case Status.Accept:
+                                messageToPrint.Append(
+                                    $"Client with ID: {data.SourceId.Value} accepted your invite, You can chat now");
+                                break;
+                            case Status.Decline:
+                                messageToPrint.Append($"Client with ID: {data.SourceId.Value} declined your invite");
+                                break;
+                            case Status.Unauthorized:
+                                break;
+                            default:
+                                throw new ArgumentOutOfRangeException();
+                        }
+
+                        break;
+                    case Operation.Message:
+                        messageToPrint.Append($"Client {data.SourceId.Value}: ").Append(data.Message.Value);
+                        break;
+                    case Operation.CloseSession:
+                        _sessionId = data.Id.Value;
+                        messageToPrint.Append("You were moved to the new session.\n")
+                            .Append($"Your new session ID: {data.Id.Value}");
+                        break;
+                    case Operation.Disconnect:
+                        if (_quiting)
+                            QuitProgram();
+                        messageToPrint.Append("You were successfully disconnected from server");
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException();
+                }
+
+            if (!string.IsNullOrEmpty(messageToPrint.ToString()))
+                Console.WriteLine(messageToPrint.ToString());
+        }
+
+        private void SetSessionId(Guid sessionId)
+        {
+            if (sessionId != Guid.Empty)
+                _sessionId = sessionId;
+        }
+
+        private void SetId(int id)
+        {
+            _id = id;
         }
 
         private static void QuitProgram()

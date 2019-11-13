@@ -44,18 +44,14 @@ namespace TCPServer.Services
 
             if (otherClients.Length == 0)
             {
-                result.Append("No other clients connected to server");
+                return string.Empty;
             }
-            else
-            {
-                result.Append("Other client IDs: ");
 
-                var delimiter = string.Empty;
-                foreach (var clientData in otherClients)
-                {
-                    result.Append(delimiter + clientData.Id);
-                    delimiter = ", ";
-                }
+            var delimiter = string.Empty;
+            foreach (var clientData in otherClients)
+            {
+                result.Append(delimiter + clientData.Id);
+                delimiter = ", ";
             }
 
             return result.ToString();

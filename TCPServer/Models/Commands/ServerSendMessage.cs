@@ -19,14 +19,19 @@ namespace TCPServer.Models.Commands
 
         protected override void ValidateAndInitializeCommandArguments()
         {
-            
             ValidateAndInitializeDestination();
+        }
+
+        protected override void SetPacketFields()
+        {
+            Packet.SetSourceId(Source.Id);
+            Packet.SetMessage(_messageToSend);
         }
 
         private void ValidateAndInitializeDestination()
         {
             if (!SessionsRepository.IsSessionFull(_sourceSessionId))
-                throw new InvalidOperationException("There is no other client in your session");
+                throw new InvalidOperationException("No other client in client's session");
             
             try
             {
@@ -38,12 +43,6 @@ namespace TCPServer.Models.Commands
             }
 
             DestinationSessionId = _sourceSessionId;
-        }
-
-        protected override void GenerateAndSetMassage()
-        {
-            var message = $"Client {Source.Id}: {_messageToSend}";
-            Packet.SetMessage(message);
         }
     }
 }

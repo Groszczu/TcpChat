@@ -11,7 +11,8 @@ namespace Core
         public byte[] Serialize(Packet packet)
         {
             var stringBuilder = new StringBuilder();
-            foreach (var property in packet.GetSetProperties())
+            var props = packet.GetSetProperties();
+            foreach (var property in props)
             {
                 stringBuilder.Append(MakeHeaderPiece(property.Key, property.ObjectValue.ToString()));
             }
@@ -53,6 +54,9 @@ namespace Core
                     case "timestamp":
                         var unixTimestamp = int.Parse(match.Groups["value"].Value);
                         packet.SetTimestamp(new Timestamp(unixTimestamp));
+                        break;
+                    case "source":
+                        packet.SetSourceId(int.Parse(match.Groups["value"].Value));
                         break;
                     case "destination":
                         packet.SetDestinationId(int.Parse(match.Groups["value"].Value));

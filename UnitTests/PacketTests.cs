@@ -39,7 +39,6 @@ namespace UnitTests
             Assert.Equal(expected.Id.ObjectValue, packet.Id.ObjectValue);
             Assert.Equal(expected.Operation.ObjectValue, packet.Operation.ObjectValue);
             Assert.Equal(expected.Status.ObjectValue, packet.Status.ObjectValue);
-            Assert.Equal(expected.MessageLength.ObjectValue, packet.MessageLength.ObjectValue);
             Assert.Equal(expected.Message.ObjectValue, packet.Message.ObjectValue);
         }
     }

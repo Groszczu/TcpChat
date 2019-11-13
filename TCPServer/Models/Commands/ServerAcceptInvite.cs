@@ -19,6 +19,12 @@ namespace TCPServer.Models.Commands
         {
             ValidateAndInitializeDestinationId();
             ValidateAndInitializeSessionIds();
+            
+        }
+
+        protected override void SetPacketFields()
+        {
+            Packet.SetSourceId(Source.Id);
         }
 
         private void ValidateAndInitializeDestinationId()
@@ -29,39 +35,34 @@ namespace TCPServer.Models.Commands
             }
             catch (InvalidOperationException)
             {
-                throw new InvalidOperationException($"There is no user with ID: {_destinationId}");
+                throw new InvalidOperationException($"There is no client with ID: {_destinationId}");
             }
         }
 
         private void ValidateAndInitializeSessionIds()
         {
             if (Destination == Source)
-                throw new InvalidOperationException("You cannot accept invitation (or invite) yourself");
+                throw new InvalidOperationException("Client cannot accept invitation (or invite) himself");
             if (!Source.GotInviteFrom(Destination.Id))
                 throw new InvalidOperationException(
-                    $"You have not received an invitation from a client with ID {Destination.Id}");
+                    $"Client have not received an invitation from a client with ID {Destination.Id}");
 
             DestinationSessionId = SessionsRepository.GetSessionId(Destination);
             var sourceSessionId = SessionsRepository.GetSessionId(Source);
             if (DestinationSessionId == sourceSessionId)
-                throw new InvalidOperationException("User you are inviting is already in your session");
+                throw new InvalidOperationException($"Client {Destination.Id} is already in your session");
             
             if (SessionsRepository.IsSessionFull(sourceSessionId))
-                throw new InvalidOperationException("Your session is full");
+                throw new InvalidOperationException("Client's session is full");
             if (SessionsRepository.IsSessionFull(DestinationSessionId))
-                throw new InvalidOperationException($"Client's {Destination.Id} session is full");
-        }
-
-        protected override void GenerateAndSetMassage()
-        {
-            var message = $"Client with ID {Source.Id} accepted your invite. You can chat now";
-            Packet.SetMessage(message);
+                throw new InvalidOperationException("Inviter session is full");
+            
+            SessionsRepository.UpdateClientSessionId(Source, DestinationSessionId);
         }
 
         public override void Execute()
         {
             base.Execute();
-            SessionsRepository.UpdateClientSessionId(Source, DestinationSessionId);
             Source.RemoveAllPendingInvites();
         }
     }

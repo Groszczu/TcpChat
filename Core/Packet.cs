@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Core
 {
@@ -10,13 +11,19 @@ namespace Core
         public HeaderProperty<Guid> Id { get; private set; }
         public HeaderProperty<Operation> Operation { get; private set; }
         public HeaderProperty<Status> Status { get; private set; }
-        private HeaderProperty<Timestamp> Timestamp { get; set; }
+        public HeaderProperty<Timestamp> Timestamp { get; set; }
+        public HeaderProperty<int> SourceId { get; private set; }
         public HeaderProperty<int> DestinationId { get; private set; }
-        public HeaderProperty<int> MessageLength { get; private set; }
         public HeaderProperty<string> Message { get; private set; }
 
         public Packet()
         {
+            Id = new HeaderProperty<Guid>();
+            Status = new HeaderProperty<Status>();
+            Timestamp = new HeaderProperty<Timestamp>();
+            SourceId = new HeaderProperty<int>();
+            DestinationId = new HeaderProperty<int>();
+            Message = new HeaderProperty<string>();
         }
 
         public Packet(Operation operation, Status status, Guid id, Timestamp timestamp = null)
@@ -29,26 +36,28 @@ namespace Core
             SetTimestamp(timestamp);
 
             DestinationId = new HeaderProperty<int>();
-            MessageLength = new HeaderProperty<int>();
+            SourceId = new HeaderProperty<int>();
             Message = new HeaderProperty<string>();
         }
 
         public IEnumerable<IHeaderProperty> GetSetProperties()
         {
-            var allProperties = GetType().GetProperties();
-            var setProperties = new HashSet<IHeaderProperty>();
-
-            foreach (var propertyInfo in allProperties)
-            {
-                var propValue = (IHeaderProperty) propertyInfo.GetValue(this, null);
-                var isSet = propValue.IsSet;
-                if (isSet)
-                {
-                    setProperties.Add(propValue);
-                }
-            }
-
-            return setProperties;
+            return GetType().GetProperties()
+                .Where(p => ((IHeaderProperty) p.GetValue(this, null)).IsSet)
+                .Select(pi => pi.GetValue(this, null) as IHeaderProperty);
+//            var setProperties = new HashSet<IHeaderProperty>();
+//
+//            foreach (var propertyInfo in allProperties)
+//            {
+//                var propValue = (IHeaderProperty) propertyInfo.GetValue(this, null);
+//                var isSet = propValue.IsSet;
+//                if (isSet)
+//                {
+//                    setProperties.Add(propValue);
+//                }
+//            }
+//
+//            return setProperties;
         }
 
         public Packet SetId(Guid id)
@@ -74,6 +83,12 @@ namespace Core
             Timestamp = new HeaderProperty<Timestamp>(timestamp, "timestamp", true);
             return this;
         }
+
+        public Packet SetSourceId(int sourceId)
+        {
+            SourceId = new HeaderProperty<int>(sourceId, "source", true);
+            return this;
+        }
         
         public Packet SetDestinationId(int destinationId)
         {
@@ -83,10 +98,10 @@ namespace Core
 
         public Packet SetMessage(string message)
         {
+            if (string.IsNullOrEmpty(message))
+                return this;
             RemoveForbiddenSigns(ref message);
             Message = new HeaderProperty<string>(message, "message", true);
-            var str = (string) Message.ObjectValue;
-            MessageLength = new HeaderProperty<int>(str.Length, "length", true);
             return this;
         }
 

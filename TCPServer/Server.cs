@@ -148,12 +148,15 @@ namespace TCPServer
 
         private void ProcessPacket(ClientData source, Packet data)
         {
-            Guid sourceSessionId;
-            lock (_lock) sourceSessionId = _sessionsRepository.GetSessionId(source);
-            var errorPacket = new Packet(data.Operation.Value, Status.Unauthorized, sourceSessionId);
             try
             {
                 ServerCommand command;
+                if (data.Operation.Value == Operation.Message)
+                {
+                    lock (_lock)
+                        command = new ServerSendMessage(source, _sessionsRepository, _packetFormatter, data.Message.Value);
+                }
+                else
                 lock (_lock)
                     command = data.Operation.Value switch
                     {
@@ -181,12 +184,17 @@ namespace TCPServer
             }
             catch (InvalidOperationException exception)
             {
-                Console.WriteLine($"Error message sent to client {source.Id}: \"{exception.Message}\"");
-                errorPacket.SetMessage(exception.Message);
-            }
-
-            if (errorPacket.Message.IsSet)
+                Console.WriteLine($"Error caused by client {source.Id}: \"{exception.Message}\"");
+                Guid sourceSessionId;
+                lock (_lock)
+                    sourceSessionId = _sessionsRepository.GetSessionId(source);
+                var errorPacket = new Packet(data.Operation.Value, Status.Unauthorized, sourceSessionId);
                 source.SendTo(_packetFormatter.Serialize(errorPacket));
+            }
+            catch (Exception exception)
+            {
+                Console.WriteLine(exception);
+            }
         }
 
         private static IPAddress TryToGetLocalIpAddress()

@@ -21,6 +21,11 @@ namespace TCPServer.Models.Commands
             ValidateAndInitializeSessionIds();
         }
 
+        protected override void SetPacketFields()
+        {
+            Packet.SetSourceId(Source.Id);
+        }
+
         private void ValidateAndInitializeDestinationId()
         {
             try
@@ -36,21 +41,15 @@ namespace TCPServer.Models.Commands
         private void ValidateAndInitializeSessionIds()
         {
             if (Destination == Source)
-                throw new InvalidOperationException("You cannot decline invitation (or invite) yourself");
+                throw new InvalidOperationException("Client cannot decline invitation (or invite) himself");
             if (!Source.GotInviteFrom(Destination.Id))
                 throw new InvalidOperationException(
-                    $"You have not received an invitation from a client with ID {Destination.Id}");
+                    $"Client have not received an invitation from a client with ID {Destination.Id}");
 
             DestinationSessionId = SessionsRepository.GetSessionId(Destination);
             var sourceSessionId = SessionsRepository.GetSessionId(Source);
             if (DestinationSessionId == sourceSessionId)
-                throw new InvalidOperationException("User you are inviting is already in your session");
-        }
-
-        protected override void GenerateAndSetMassage()
-        {
-            var message = $"Client with ID: {Source.Id} declined your invite";
-            Packet.SetMessage(message);
+                throw new InvalidOperationException($"Client {Destination.Id} is already in your session");
         }
 
         public override void Execute()

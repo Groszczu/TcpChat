@@ -28,14 +28,14 @@ namespace TCPServer.Models.Commands
         }
 
         protected abstract void ValidateAndInitializeCommandArguments();
-
-        protected abstract void GenerateAndSetMassage();
+        protected virtual void SetPacketFields()
+        {}
 
         public virtual void Execute()
         {
             ValidateAndInitializeCommandArguments();
             Packet = new Packet(_operation, _status, DestinationSessionId);
-            GenerateAndSetMassage();
+            SetPacketFields();
             
             var serializedPacket = _packetFormatter.Serialize(Packet);
             Destination.SendTo(serializedPacket);
