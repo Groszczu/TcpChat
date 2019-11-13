@@ -212,7 +212,7 @@ namespace TCPClient
                 {
                     case Operation.GetId:
                         UpdateSessionAndClientIds(data.Id.Value, data.DestinationId.Value);
-                        messageToPrint.Append($"Your ID: {_id}, your session ID: '{data.Id.Value}'\n");
+                        messageToPrint.Append($"Your ID: {_id}, your session ID: '{_sessionId}'\n");
 
                         if (data.Status.Value == Status.Initial)
                             break;
@@ -247,7 +247,7 @@ namespace TCPClient
                     case Operation.CloseSession:
                         _sessionId = data.Id.Value;
                         messageToPrint.Append("You were moved to the new session.\n")
-                            .Append($"Your new session ID: {data.Id.Value}");
+                            .Append($"Your new session ID: {_sessionId}");
                         break;
                     case Operation.Disconnect:
                         if (_quiting)
@@ -266,11 +266,6 @@ namespace TCPClient
         {
             _sessionId = sessionId;
             _id = clientId;
-        }
-
-        private void SetId(int id)
-        {
-            _id = id;
         }
 
         private static void QuitProgram()
