@@ -64,6 +64,7 @@ namespace TCPServer.Models.Commands
         {
             base.Execute();
             Source.RemoveAllPendingInvites();
+            Destination.RemoveAllPendingInvites();
 
             var sourceNewSessionId = SessionsRepository.GetSessionId(Source);
             var initialPacket = new Packet(Operation.GetId, Status.Initial, sourceNewSessionId)

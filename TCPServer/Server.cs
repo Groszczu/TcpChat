@@ -1,5 +1,4 @@
 ﻿using System;
-using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
@@ -108,11 +107,11 @@ namespace TCPServer
 
 
                 Console.WriteLine($"Connected with client {newClientId}");
-                
+
                 var initialPacket = new Packet(Operation.GetId, Status.Initial, newClientSessionId)
                     .SetDestinationId(newClientId);
                 newClientData.SendTo(_packetFormatter.Serialize(initialPacket));
-                
+
                 new Thread(async () =>
                 {
                     Thread.CurrentThread.IsBackground = true;
@@ -129,6 +128,13 @@ namespace TCPServer
             var stream = client.Socket.GetStream();
             while (true)
             {
+                if (client.ToClose)
+                {
+                    EndConnection(client);
+                    Console.WriteLine($"Client {client.Id} disconnected successfully");
+                    break;
+                }
+
                 Packet receivedPacket;
                 try
                 {
@@ -137,18 +143,11 @@ namespace TCPServer
                 catch (Exception)
                 {
                     Console.WriteLine($"Connection with client {client.Id} was forcibly closed");
-                    EndConnection(client, stream);
+                    EndConnection(client);
                     break;
                 }
 
                 ProcessPacket(client, receivedPacket);
-
-                if (!client.ToClose)
-                    continue;
-
-                EndConnection(client, stream);
-                Console.WriteLine($"Client {client.Id} disconnected successfully");
-                break;
             }
         }
 
@@ -213,12 +212,12 @@ namespace TCPServer
             return localIpAddress;
         }
 
-        private void EndConnection(ClientData client, Stream stream)
+        private void EndConnection(ClientData client)
         {
             lock (_lock)
                 _sessionsRepository.RemoveClient(client);
 
-            stream.Close();
+            client.Socket.Client.Shutdown(SocketShutdown.Both);
             client.Socket.Close();
         }
 

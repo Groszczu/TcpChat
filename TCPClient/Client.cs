@@ -18,7 +18,7 @@ namespace TCPClient
         private TcpClient _client = new TcpClient();
         private int _id = -1;
         private Guid _sessionId = Guid.Empty;
-        private bool _disconnecting;
+
         private bool _quiting;
 
         private NetworkStream _stream;
@@ -34,7 +34,7 @@ namespace TCPClient
         public void Run()
         {
             Console.WriteLine("[CLIENT CONSOLE]");
-            while (!_quiting)
+            while (true)
             {
                 var tag = Console.ReadLine();
                 ProcessTag(tag);
@@ -116,7 +116,6 @@ namespace TCPClient
 
                 case var input when new DisconnectTagValidator().Validate(input):
                     command = new ClientDisconnect(_sessionId, _byteSender, _packetFormatter);
-                    _disconnecting = true;
                     break;
             }
 
@@ -162,7 +161,7 @@ namespace TCPClient
                 _receivingThread = new Thread(async () =>
                 {
                     Thread.CurrentThread.IsBackground = true;
-                    await ReceiveAndPrint();
+                    await HandleReceivingPackets();
                 });
 
                 _receivingThread.Start();
@@ -173,18 +172,10 @@ namespace TCPClient
             }
         }
 
-        private async Task ReceiveAndPrint()
+        private async Task HandleReceivingPackets()
         {
             while (true)
             {
-                if (_disconnecting)
-                {
-                    _stream.Close();
-                    _client.Close();
-                    _disconnecting = false;
-                    break;
-                }
-
                 Packet receivedPacket;
                 try
                 {
@@ -195,6 +186,16 @@ namespace TCPClient
                     Console.WriteLine("Server was forcibly closed");
                     _stream.Close();
                     _client.Close();
+                    break;
+                }
+
+                // server closed client's stream
+                if (receivedPacket == null)
+                {
+                    _client.Client.Shutdown(SocketShutdown.Both);
+                    _client.Close();
+                    if (_quiting)
+                        QuitProgram();
                     break;
                 }
 
@@ -251,8 +252,6 @@ namespace TCPClient
                             .Append($"Your new session ID: {_sessionId}");
                         break;
                     case Operation.Disconnect:
-                        if (_quiting)
-                            QuitProgram();
                         messageToPrint.Append("You were successfully disconnected from server");
                         break;
                     default:
@@ -291,7 +290,7 @@ namespace TCPClient
             Console.WriteLine("Options:");
             Console.WriteLine($"{"-h",-20}open help menu");
             Console.WriteLine(
-                $"{"-cn [ipAddress:portNumber]",-20}try to connect to server with given IPv4 address and listening on given port");
+                $"{"-cn [ipAdr:portNum]",-20}try to connect to server with given IPv4 address and listening on given port");
             Console.WriteLine($"{"-id",-20}get your session ID and other client's IDs");
             Console.WriteLine($"{"-i [id]",-20}invite client with given ID to your session");
             Console.WriteLine($"{"-a [id]",-20}accept invite to other session from client with given ID");
@@ -299,7 +298,7 @@ namespace TCPClient
             Console.WriteLine($"{"-dn",-20}disconnect from server");
             Console.WriteLine(
                 $"{"-c",-20}close current session and go to new one (possible only if other client is in your session)");
-            Console.WriteLine($"{"-q",-20}quit");
+            Console.WriteLine($"{"-q",-20}quit (disconnects from server if needed)");
         }
     }
 }

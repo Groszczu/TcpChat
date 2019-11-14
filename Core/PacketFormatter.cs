@@ -27,6 +27,11 @@ namespace Core
 
             var buffer = new byte[Packet.MaximumPacketSize];
             var dataRead = await stream.ReadAsync(buffer, 0, buffer.Length);
+            
+            // stream has been closed
+            if (dataRead == 0)
+                return null;
+                
             var formattedBytes = new byte[dataRead];
 
             Array.Copy(buffer, formattedBytes, dataRead);
