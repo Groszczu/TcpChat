@@ -218,8 +218,8 @@ namespace TCPClient
                         if (data.Status.Value == Status.Initial)
                             break;
                         if (data.Message.IsSet)
-                            messageToPrint.Append("\nOther client's IDs: ").Append(data.Message.Value
-                                .Replace(";", ", "));
+                            messageToPrint.Append("\nOther client's IDs: ")
+                                .Append(data.Message.Value.Replace(";", ", "));
                         else
                             messageToPrint.Append("\nNo other clients connected");
                         break;
@@ -235,8 +235,6 @@ namespace TCPClient
                                 break;
                             case Status.Decline:
                                 messageToPrint.Append($"Client with ID: {data.SourceId.Value} declined your invite");
-                                break;
-                            case Status.Unauthorized:
                                 break;
                             default:
                                 throw new ArgumentOutOfRangeException();
