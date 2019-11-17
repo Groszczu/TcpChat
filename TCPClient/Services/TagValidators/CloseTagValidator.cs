@@ -1,8 +1,8 @@
 ﻿namespace TCPClient.Services.TagValidators
 {
-    public class CloseTagValidator : ITagValidator
+    public static class CloseTagValidator
     {
-        public bool Validate(string tag)
+        public static bool Validate(string tag)
         {
             return tag == "-c";
         }

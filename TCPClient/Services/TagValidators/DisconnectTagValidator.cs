@@ -1,8 +1,8 @@
 ﻿namespace TCPClient.Services.TagValidators
 {
-    public class DisconnectTagValidator : ITagValidator
+    public static class DisconnectTagValidator
     {
-        public bool Validate(string tag)
+        public static bool Validate(string tag)
         {
             return tag == "-dn";
         }

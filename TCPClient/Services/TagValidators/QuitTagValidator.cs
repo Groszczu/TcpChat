@@ -1,8 +1,8 @@
 ﻿namespace TCPClient.Services.TagValidators
 {
-    public class QuitTagValidator : ITagValidator
+    public static class QuitTagValidator
     {
-        public bool Validate(string tag)
+        public static bool Validate(string tag)
         {
             return tag == "-q";
         }

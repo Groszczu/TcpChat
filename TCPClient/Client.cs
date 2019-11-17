@@ -46,22 +46,21 @@ namespace TCPClient
             ClientCommand command = null;
             ITagFollowedByValueValidator validator;
 
-            if (new HelpTagValidator().Validate(tag))
+            if (HelpTagValidator.Validate(tag))
             {
                 PrintHelp();
                 return;
             }
 
-            if (new ConnectionTagValidator().Validate(tag))
+            if (ConnectionTagValidator.Validate(tag))
             {
-                var connectionTagValidator = new ConnectionTagValidator();
-                var ipAddress = connectionTagValidator.GetIpAddress(tag);
-                var portNumber = connectionTagValidator.GetPortNumber(tag);
+                var ipAddress = ConnectionTagValidator.GetIpAddress(tag);
+                var portNumber = ConnectionTagValidator.GetPortNumber(tag);
                 TryToConnect(ipAddress, portNumber);
                 return;
             }
 
-            if (new QuitTagValidator().Validate(tag))
+            if (QuitTagValidator.Validate(tag))
             {
                 if (_client.Connected)
                 {
@@ -83,7 +82,7 @@ namespace TCPClient
             int destinationId;
             switch (tag)
             {
-                case var input when new IdTagValidator().Validate(input):
+                case var input when IdTagValidator.Validate(input):
                     command = new ClientGetId(_sessionId, _byteSender, _packetFormatter);
                     break;
 
@@ -110,11 +109,11 @@ namespace TCPClient
                     command = new ClientSendMessage(_sessionId, _byteSender, _packetFormatter, messageToSend);
                     break;
 
-                case var input when new CloseTagValidator().Validate(input):
+                case var input when CloseTagValidator.Validate(input):
                     command = new ClientCloseAndOpenNewSessionCommand(_sessionId, _byteSender, _packetFormatter);
                     break;
 
-                case var input when new DisconnectTagValidator().Validate(input):
+                case var input when DisconnectTagValidator.Validate(input):
                     command = new ClientDisconnect(_sessionId, _byteSender, _packetFormatter);
                     break;
             }

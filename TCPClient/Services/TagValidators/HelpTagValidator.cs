@@ -1,8 +1,8 @@
 ﻿namespace TCPClient.Services.TagValidators
 {
-    public class HelpTagValidator : ITagValidator
+    public static class HelpTagValidator
     {
-        public bool Validate(string tag)
+        public static bool Validate(string tag)
         {
             return tag == "-h";
         }
