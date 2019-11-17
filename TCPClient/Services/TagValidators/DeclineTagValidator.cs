@@ -1,10 +1,17 @@
 ﻿namespace TCPClient.Services.TagValidators
 {
-    public class DeclineTagValidator : TagFollowedByNumberValidator
+    public static class DeclineTagValidator
     {
         private const string DeclineTag = "d";
-        public DeclineTagValidator() : base(DeclineTag)
+
+        public static bool Validate(string tag)
         {
+            return TagFollowedByNumberValidator.Validate(tag, DeclineTag);
+        }
+
+        public static string GetMatchedValue(string tag)
+        {
+            return TagFollowedByNumberValidator.GetMatchedValue(tag, DeclineTag);
         }
     }
 }

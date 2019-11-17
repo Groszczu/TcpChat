@@ -1,10 +1,20 @@
-﻿namespace TCPClient.Services.TagValidators
+﻿using System.Buffers.Text;
+using System.ComponentModel;
+
+namespace TCPClient.Services.TagValidators
 {
-    public class InviteTagValidator : TagFollowedByNumberValidator
+    public static class InviteTagValidator 
     {
         private const string InviteTag = "i";
-        public InviteTagValidator() : base(InviteTag)
+
+        public static bool Validate(string tag)
         {
+            return TagFollowedByNumberValidator.Validate(tag, InviteTag);
+        }
+
+        public static string GetMatchedValue(string tag)
+        {
+            return TagFollowedByNumberValidator.GetMatchedValue(tag, InviteTag);
         }
     }
 }

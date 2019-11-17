@@ -2,23 +2,18 @@
 
 namespace TCPClient.Services.TagValidators
 {
-    public abstract class TagFollowedByValueValidator : ITagFollowedByValueValidator
+    public abstract class TagFollowedByValueValidator
     {
-        private readonly Regex _regex;
-
-        protected TagFollowedByValueValidator(string expectedTag)
+        public static bool Validate(string tag, string expectedTag)
         {
-            _regex = new Regex($"^-{expectedTag}\\s+(?<value>.+)$");
+            var regex = new Regex($"^-{expectedTag}\\s+(?<value>.+)$");
+            return regex.IsMatch(tag);
         }
 
-        public virtual bool Validate(string tag)
+        public static string GetMatchedValue(string tag, string expectedTag)
         {
-            return _regex.IsMatch(tag);
-        }
-
-        public string GetMatchedValue(string tag)
-        {
-            return _regex.Match(tag).Groups["value"].Value;
+            var regex = new Regex($"^-{expectedTag}\\s+(?<value>.+)$");
+            return regex.Match(tag).Groups["value"].Value;
         }
     }
 }

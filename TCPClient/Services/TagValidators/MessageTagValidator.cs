@@ -1,10 +1,19 @@
-﻿namespace TCPClient.Services.TagValidators
+﻿using Microsoft.Extensions.Options;
+
+namespace TCPClient.Services.TagValidators
 {
-    public class MessageTagValidator : TagFollowedByValueValidator
+    public static class MessageTagValidator 
     {
         private const string MessageTag = "m";
-        public MessageTagValidator() : base(MessageTag)
+
+        public static bool Validate(string tag)
         {
+            return TagFollowedByValueValidator.Validate(tag, MessageTag);
+        }
+
+        public static string GetMatchedValue(string tag)
+        {
+            return TagFollowedByValueValidator.GetMatchedValue(tag, MessageTag);
         }
     }
 }

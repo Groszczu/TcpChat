@@ -44,7 +44,6 @@ namespace TCPClient
         private void ProcessTag(string tag)
         {
             ClientCommand command = null;
-            ITagFollowedByValueValidator validator;
 
             if (HelpTagValidator.Validate(tag))
             {
@@ -86,26 +85,26 @@ namespace TCPClient
                     command = new ClientGetId(_sessionId, _byteSender, _packetFormatter);
                     break;
 
-                case var input when (validator = new InviteTagValidator()).Validate(input):
-                    destinationId = int.Parse(validator.GetMatchedValue(tag));
+                case var input when InviteTagValidator.Validate(input):
+                    destinationId = int.Parse(InviteTagValidator.GetMatchedValue(tag));
                     command = new ClientInvite(destinationId, _sessionId, _byteSender,
                         _packetFormatter);
                     break;
 
-                case var input when (validator = new AcceptTagValidator()).Validate(input):
-                    destinationId = int.Parse(validator.GetMatchedValue(tag));
+                case var input when AcceptTagValidator.Validate(input):
+                    destinationId = int.Parse(AcceptTagValidator.GetMatchedValue(tag));
                     command = new ClientAcceptInvite(destinationId, _sessionId, _byteSender,
                         _packetFormatter);
                     break;
 
-                case var input when (validator = new DeclineTagValidator()).Validate(input):
-                    destinationId = int.Parse(validator.GetMatchedValue(tag));
+                case var input when DeclineTagValidator.Validate(input):
+                    destinationId = int.Parse(DeclineTagValidator.GetMatchedValue(tag));
                     command = new ClientDeclineInvite(destinationId, _sessionId, _byteSender,
                         _packetFormatter);
                     break;
 
-                case var input when (validator = new MessageTagValidator()).Validate(input):
-                    var messageToSend = validator.GetMatchedValue(tag);
+                case var input when MessageTagValidator.Validate(input):
+                    var messageToSend = MessageTagValidator.GetMatchedValue(tag);
                     command = new ClientSendMessage(_sessionId, _byteSender, _packetFormatter, messageToSend);
                     break;
 
