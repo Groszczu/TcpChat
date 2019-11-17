@@ -1,5 +1,4 @@
-﻿using System.Text;
-using Core;
+﻿using Core;
 using TCPServer.Services;
 
 namespace TCPServer.Models.Commands

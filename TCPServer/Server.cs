@@ -56,30 +56,58 @@ namespace TCPServer
             switch (tag)
             {
                 case "-s":
-                    _server.Start();
-                    Console.WriteLine($"Server IP: {_ipAddressString}");
-                    Console.WriteLine($"Listening on port {_portNumber}");
-                    _connectionThread = new Thread(async () =>
-                    {
-                        Thread.CurrentThread.IsBackground = true;
-                        await HandleConnection();
-                    });
-                    _connectionThread.Start();
+                    StartListeningOnNewThread();
+                    PrintServerParameters();
                     break;
                 case "-q":
-                    if (CanQuit())
-                        _shutDown = true;
-                    else
-                        Console.WriteLine("Cannot quit because clients are connected");
+                    TryToQuit();
                     break;
                 case "-h":
                     PrintHelp();
                     break;
                 default:
-                    Console.WriteLine("Invalid operation tag");
-                    Console.WriteLine("Enter '-h' to get help");
+                    PrintInvalidTagMessage();
                     break;
             }
+        }
+
+
+        private void StartListeningOnNewThread()
+        {
+            _server.Start();
+            _connectionThread = new Thread(async () =>
+            {
+                Thread.CurrentThread.IsBackground = true;
+                await HandleConnection();
+            });
+            _connectionThread.Start();
+        }
+
+        private void PrintServerParameters()
+        {
+            Console.WriteLine($"Server is listening on {_ipAddressString}:{_portNumber}");
+        }
+
+        private void TryToQuit()
+        {
+            if (CanQuit())
+                _shutDown = true;
+            else
+                Console.WriteLine("Cannot quit because clients are connected");
+        }
+
+        private static void PrintHelp()
+        {
+            Console.WriteLine("Options:");
+            Console.WriteLine($"{"-h",-20}open help menu");
+            Console.WriteLine($"{"-s",-20}start listening");
+            Console.WriteLine($"{"-q",-20}try to quit");
+        }
+
+        private static void PrintInvalidTagMessage()
+        {
+            Console.WriteLine("Invalid operation tag");
+            Console.WriteLine("Enter '-h' to get help");
         }
 
         private async Task HandleConnection()
@@ -98,26 +126,43 @@ namespace TCPServer
                     return;
                 }
 
-                var newClientId = _clientIdsRepository.NewClientId();
+                var newClientData = CreateAndRegisterNewClientData(newClient);
+                Console.WriteLine($"Connected with client {newClientData.Id}");
 
-                var newClientData = new ClientData(newClientId, newClient);
-                var newClientSessionId = Guid.NewGuid();
-                lock (_lock)
-                    _sessionsRepository.AddSessionRecord(newClientData, newClientSessionId);
-
-
-                Console.WriteLine($"Connected with client {newClientId}");
-
-                var initialPacket = new Packet(Operation.GetId, Status.Initial, newClientSessionId)
-                    .SetDestinationId(newClientId);
-                newClientData.SendTo(_packetFormatter.Serialize(initialPacket));
-
-                new Thread(async () =>
-                {
-                    Thread.CurrentThread.IsBackground = true;
-                    await ReceiveFromClient(newClientData);
-                }).Start();
+                SendInitialPacket(newClientData);
+                StartReceivingFromClient(newClientData);
             }
+        }
+
+        private ClientData CreateAndRegisterNewClientData(TcpClient clientSocket)
+        {
+            var newClientId = _clientIdsRepository.NewClientId();
+            var newClientData = new ClientData(newClientId, clientSocket);
+            var newClientSessionId = Guid.NewGuid();
+            lock (_lock)
+                _sessionsRepository.AddSessionRecord(newClientData, newClientSessionId);
+
+            return newClientData;
+        }
+
+        private void SendInitialPacket(ClientData clientData)
+        {
+            Guid sessionId;
+            lock (_lock)
+                sessionId = _sessionsRepository.GetSessionId(clientData);
+
+            var initialPacket = new Packet(Operation.GetId, Status.Initial, sessionId)
+                .SetDestinationId(clientData.Id);
+            clientData.SendTo(_packetFormatter.Serialize(initialPacket));
+        }
+
+        private void StartReceivingFromClient(ClientData clientData)
+        {
+            new Thread(async () =>
+            {
+                Thread.CurrentThread.IsBackground = true;
+                await ReceiveFromClient(clientData);
+            }).Start();
         }
 
         private async Task ReceiveFromClient(object o)
@@ -141,6 +186,13 @@ namespace TCPServer
                     receivedPacket = await _packetFormatter.DeserializeAsync(stream);
                 }
                 catch (Exception)
+                {
+                    Console.WriteLine($"Connection with client {client.Id} was forcibly closed");
+                    EndConnection(client);
+                    break;
+                }
+
+                if (receivedPacket == null)
                 {
                     Console.WriteLine($"Connection with client {client.Id} was forcibly closed");
                     EndConnection(client);
@@ -190,10 +242,6 @@ namespace TCPServer
                 var errorPacket = new Packet(data.Operation.Value, Status.Unauthorized, sourceSessionId);
                 source.SendTo(_packetFormatter.Serialize(errorPacket));
             }
-            catch (Exception exception)
-            {
-                Console.WriteLine(exception);
-            }
         }
 
         private static IPAddress TryToGetLocalIpAddress()
@@ -206,7 +254,7 @@ namespace TCPServer
             catch (Exception exception)
             {
                 Console.WriteLine(exception.Message);
-                throw;
+                localIpAddress = IPAddress.Loopback;
             }
 
             return localIpAddress;
@@ -249,14 +297,6 @@ namespace TCPServer
         {
             lock (_lock)
                 return _sessionsRepository.IsEmpty();
-        }
-
-        private static void PrintHelp()
-        {
-            Console.WriteLine("Options:");
-            Console.WriteLine($"{"-h",-20}open help menu");
-            Console.WriteLine($"{"-s",-20}start listening");
-            Console.WriteLine($"{"-q",-20}try to quit");
         }
     }
 }

@@ -14,7 +14,6 @@ namespace TCPServer.Models.Commands
         {
             Destination = Source;
             DestinationSessionId = SessionsRepository.GetSessionId(Destination);
-            //SessionsRepository.RemoveClient(Destination);
             Destination.ToClose = true;
         }
     }

@@ -65,7 +65,6 @@ namespace TCPServer.Services
         public void RemoveClient(ClientData client)
         {
             _sessions.Remove(client);
-            client.ToClose = true;
         }
 
         public Guid GetSessionId(ClientData clientData)
