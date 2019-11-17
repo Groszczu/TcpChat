@@ -1,7 +1,4 @@
-﻿using System.Buffers.Text;
-using System.ComponentModel;
-
-namespace TCPClient.Services.TagValidators
+﻿namespace TCPClient.Services.TagValidators
 {
     public static class InviteTagValidator 
     {

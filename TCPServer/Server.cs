@@ -22,7 +22,6 @@ namespace TCPServer
         private int _portNumber;
         private string _ipAddressString;
 
-
         private Thread _connectionThread;
 
         private bool _shutDown;

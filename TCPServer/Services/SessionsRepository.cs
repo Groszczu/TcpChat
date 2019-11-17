@@ -64,6 +64,11 @@ namespace TCPServer.Services
 
         public void RemoveClient(ClientData client)
         {
+            foreach (var session in _sessions.Where(session => session.Key.GotInviteFrom(client.Id)))
+            {
+                session.Key.RemoveInvite(client.Id);
+            }
+
             _sessions.Remove(client);
         }
 

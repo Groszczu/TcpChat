@@ -1,6 +1,4 @@
-﻿using Microsoft.Extensions.Options;
-
-namespace TCPClient.Services.TagValidators
+﻿namespace TCPClient.Services.TagValidators
 {
     public static class MessageTagValidator 
     {
