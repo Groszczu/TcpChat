@@ -10,7 +10,7 @@ namespace TCPServer.Models.Commands
 
         public ServerDeclineInvite(ClientData source, int destinationId, ISessionsRepository sessionsRepository,
             IPacketFormatter packetFormatter)
-            : base(source, sessionsRepository, packetFormatter, Operation.Invite, Status.Decline)
+            : base(source, sessionsRepository, packetFormatter, Operation.Invite, Status.Decline, destinationId)
         {
             _destinationId = destinationId;
         }

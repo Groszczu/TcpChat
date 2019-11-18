@@ -7,7 +7,7 @@ using Xunit;
 
 namespace UnitTests
 {
-    public class PacketTests
+   /* public class PacketTests
     {
         [Fact]
         public void Packet_Should_Serialize_Correctly()
@@ -41,5 +41,5 @@ namespace UnitTests
             Assert.Equal(expected.Status.ObjectValue, packet.Status.ObjectValue);
             Assert.Equal(expected.Message.ObjectValue, packet.Message.ObjectValue);
         }
-    }
+    }*/
 }

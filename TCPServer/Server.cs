@@ -150,7 +150,7 @@ namespace TCPServer
             lock (_lock)
                 sessionId = _sessionsRepository.GetSessionId(clientData);
 
-            var initialPacket = new Packet(Operation.GetId, Status.Initial, sessionId)
+            var initialPacket = new Packet(Operation.GetId, Status.Initial, sessionId, clientData.Id)
                 .SetDestinationId(clientData.Id);
             clientData.SendTo(_packetFormatter.Serialize(initialPacket));
         }
@@ -222,7 +222,7 @@ namespace TCPServer
                             _ => (ICommand) null
                         }),
                         Operation.Message => new ServerSendMessage(source, _sessionsRepository, _packetFormatter,
-                            data.Message.Value),
+                            data.Message.Value, _sessionsRepository.GetSessionId(source)),
                         Operation.CloseSession => new ServerCloseAndOpenNewSessionCommand(source, _sessionsRepository,
                             _packetFormatter),
                         Operation.Disconnect => new ServerDisconnect(source, _sessionsRepository, _packetFormatter),
@@ -238,7 +238,7 @@ namespace TCPServer
                 Guid sourceSessionId;
                 lock (_lock)
                     sourceSessionId = _sessionsRepository.GetSessionId(source);
-                var errorPacket = new Packet(data.Operation.Value, Status.Unauthorized, sourceSessionId);
+                var errorPacket = new Packet(data.Operation.Value, Status.Unauthorized, sourceSessionId, source.Id);
                 source.SendTo(_packetFormatter.Serialize(errorPacket));
             }
         }

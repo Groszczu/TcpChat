@@ -16,6 +16,7 @@ namespace Core
         public HeaderProperty<int> DestinationId { get; private set; }
         public HeaderProperty<string> Message { get; private set; }
 
+        public HeaderProperty<int> Ident { get; private set; }
         public Packet()
         {
             Id = new HeaderProperty<Guid>();
@@ -26,7 +27,7 @@ namespace Core
             Message = new HeaderProperty<string>();
         }
 
-        public Packet(Operation operation, Status status, Guid id, Timestamp timestamp = null)
+        public Packet(Operation operation, Status status, Guid id, int ident, Timestamp timestamp = null)
         {
             SetId(id);
             SetOperation(operation);
@@ -34,6 +35,8 @@ namespace Core
             if (timestamp == null)
                 timestamp = new Timestamp(DateTime.UtcNow);
             SetTimestamp(timestamp);
+            SetIdent(ident);
+            
 
             DestinationId = new HeaderProperty<int>();
             SourceId = new HeaderProperty<int>();
@@ -62,19 +65,19 @@ namespace Core
 
         public Packet SetId(Guid id)
         {
-            Id = new HeaderProperty<Guid>(id, "id", true);
+            Id = new HeaderProperty<Guid>(id, "sid", true);
             return this;
         }
 
         public Packet SetOperation(Operation operation)
         {
-            Operation = new HeaderProperty<Operation>(operation, "operation", true);
+            Operation = new HeaderProperty<Operation>(operation, "Operacja", true);
             return this;
         }
 
         public Packet SetStatus(Status status)
         {
-            Status = new HeaderProperty<Status>(status, "status", true);
+            Status = new HeaderProperty<Status>(status, "Status", true);
             return this;
         }
 
@@ -108,6 +111,13 @@ namespace Core
         private static void RemoveForbiddenSigns(ref string message)
         {
             message = message.Replace("|", "");
+        }
+
+        public Packet SetIdent(int ident)
+        {
+            
+            DestinationId = new HeaderProperty<int>(ident, "Identyfikator", true);
+            return this;
         }
     }
 }

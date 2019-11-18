@@ -63,7 +63,7 @@ namespace TCPClient
             {
                 if (_client.Connected)
                 {
-                    command = new ClientDisconnect(_sessionId, _byteSender, _packetFormatter);
+                    command = new ClientDisconnect(_sessionId, _byteSender, _packetFormatter, _id);
                     _quiting = true;
                 }
                 else
@@ -82,38 +82,38 @@ namespace TCPClient
             switch (tag)
             {
                 case var input when IdTagValidator.Validate(input):
-                    command = new ClientGetId(_sessionId, _byteSender, _packetFormatter);
+                    command = new ClientGetId(_sessionId, _byteSender, _packetFormatter, _id);
                     break;
 
                 case var input when InviteTagValidator.Validate(input):
                     destinationId = int.Parse(InviteTagValidator.GetMatchedValue(tag));
                     command = new ClientInvite(destinationId, _sessionId, _byteSender,
-                        _packetFormatter);
+                        _packetFormatter, _id);
                     break;
 
                 case var input when AcceptTagValidator.Validate(input):
                     destinationId = int.Parse(AcceptTagValidator.GetMatchedValue(tag));
                     command = new ClientAcceptInvite(destinationId, _sessionId, _byteSender,
-                        _packetFormatter);
+                        _packetFormatter, _id);
                     break;
 
                 case var input when DeclineTagValidator.Validate(input):
                     destinationId = int.Parse(DeclineTagValidator.GetMatchedValue(tag));
                     command = new ClientDeclineInvite(destinationId, _sessionId, _byteSender,
-                        _packetFormatter);
+                        _packetFormatter, _id);
                     break;
 
                 case var input when MessageTagValidator.Validate(input):
                     var messageToSend = MessageTagValidator.GetMatchedValue(tag);
-                    command = new ClientSendMessage(_sessionId, _byteSender, _packetFormatter, messageToSend);
+                    command = new ClientSendMessage(_sessionId, _byteSender, _packetFormatter, messageToSend, _id);
                     break;
 
                 case var input when CloseTagValidator.Validate(input):
-                    command = new ClientCloseAndOpenNewSessionCommand(_sessionId, _byteSender, _packetFormatter);
+                    command = new ClientCloseAndOpenNewSessionCommand(_sessionId, _byteSender, _packetFormatter, _id);
                     break;
 
                 case var input when DisconnectTagValidator.Validate(input):
-                    command = new ClientDisconnect(_sessionId, _byteSender, _packetFormatter);
+                    command = new ClientDisconnect(_sessionId, _byteSender, _packetFormatter, _id);
                     break;
             }
 
@@ -166,7 +166,7 @@ namespace TCPClient
             }
             else
             {
-                Console.WriteLine("Filed to connect");
+                Console.WriteLine("Failed to connect");
             }
         }
 
@@ -194,6 +194,7 @@ namespace TCPClient
                     _client.Close();
                     if (_quiting)
                         QuitProgram();
+                    
                     break;
                 }
 

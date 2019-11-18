@@ -10,8 +10,8 @@ namespace TCPServer.Models.Commands
         private readonly Guid _sourceSessionId;
 
         public ServerSendMessage(ClientData source, ISessionsRepository sessionsRepository,
-            IPacketFormatter packetFormatter, string messageToSend)
-        : base(source, sessionsRepository, packetFormatter, Operation.Message, Status.Ok)
+            IPacketFormatter packetFormatter, string messageToSend, Guid sourceSessionId)
+        : base(source, sessionsRepository, packetFormatter, Operation.Message, Status.Ok, sessionsRepository.GetSecondClientFromSession(sourceSessionId, source).Id)
         {
             _messageToSend = messageToSend;
             _sourceSessionId = SessionsRepository.GetSessionId(Source);

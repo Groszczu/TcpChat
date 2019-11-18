@@ -45,14 +45,14 @@ namespace Core
             {
                 switch (match.Groups["key"].Value)
                 {
-                    case "id":
+                    case "sid":
                         packet.SetId(Guid.Parse(match.Groups["value"].Value));
                         break;
-                    case "operation":
+                    case "Operacja":
                         Enum.TryParse(match.Groups["value"].Value, out Operation operation);
                         packet.SetOperation(operation);
                         break;
-                    case "status":
+                    case "Status":
                         Enum.TryParse(match.Groups["value"].Value, out Status status);
                         packet.SetStatus(status);
                         break;
@@ -65,6 +65,9 @@ namespace Core
                         break;
                     case "destination":
                         packet.SetDestinationId(int.Parse(match.Groups["value"].Value));
+                        break;
+                    case "Identyfikator":
+                        packet.SetIdent(int.Parse(match.Groups["value"].Value));
                         break;
                     case "length":
                         break;

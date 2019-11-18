@@ -10,7 +10,7 @@ namespace TCPServer.Models.Commands
 
         public ServerAcceptInvite(ClientData source, int destinationId, ISessionsRepository sessionsRepository,
             IPacketFormatter packetFormatter)
-            : base(source, sessionsRepository, packetFormatter, Operation.Invite, Status.Accept)
+            : base(source, sessionsRepository, packetFormatter, Operation.Invite, Status.Accept, destinationId)
         {
             _destinationId = destinationId;
         }
@@ -67,7 +67,7 @@ namespace TCPServer.Models.Commands
             Destination.RemoveAllPendingInvites();
 
             var sourceNewSessionId = SessionsRepository.GetSessionId(Source);
-            var initialPacket = new Packet(Operation.GetId, Status.Initial, sourceNewSessionId)
+            var initialPacket = new Packet(Operation.GetId, Status.Initial, sourceNewSessionId, _destinationId)
                 .SetDestinationId(Source.Id);
             Source.SendTo(PacketFormatter.Serialize(initialPacket));
         }

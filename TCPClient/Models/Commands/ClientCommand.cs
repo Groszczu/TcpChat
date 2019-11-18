@@ -11,11 +11,11 @@ namespace TCPClient.Models.Commands
         private readonly IPacketFormatter _packetFormatter;
 
         protected ClientCommand(Guid sessionId, ISender sender, IPacketFormatter packetFormatter,
-            Operation operation, Status status)
+            Operation operation, Status status, int identyfikator)
         {
             _sender = sender;
             _packetFormatter = packetFormatter;
-            Packet = new Packet(operation, status, sessionId);
+            Packet = new Packet(operation, status, sessionId, identyfikator);
         }
 
         public virtual void Execute()

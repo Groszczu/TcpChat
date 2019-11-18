@@ -6,8 +6,8 @@ namespace TCPClient.Models.Commands
     public class ClientSendMessage : ClientCommand
     {
         public ClientSendMessage(Guid sessionId, ISender sender, IPacketFormatter packetFormatter,
-            string messageToSend)
-            : base(sessionId, sender, packetFormatter, Operation.Message, Status.Ok)
+            string messageToSend, int ident)
+            : base(sessionId, sender, packetFormatter, Operation.Message, Status.Ok, ident)
         {
             Packet.SetMessage(messageToSend);
         }
