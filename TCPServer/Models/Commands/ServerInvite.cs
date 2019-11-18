@@ -11,7 +11,7 @@ namespace TCPServer.Models.Commands
 
         public ServerInvite(ClientData source, int destinationId, ISessionsRepository sessionsRepository,
             IPacketFormatter packetFormatter)
-            : base(source, sessionsRepository, packetFormatter, Operation.Invite, Status.Ok, destinationId)
+            : base(source, sessionsRepository, packetFormatter, Operation.Invite, Status.Ok)
         {
             _destinationId = destinationId;
             _sourceSessionId = SessionsRepository.GetSessionId(Source);

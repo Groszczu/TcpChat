@@ -10,7 +10,7 @@ namespace TCPServer.Models.Commands
 
         public ServerAcceptInvite(ClientData source, int destinationId, ISessionsRepository sessionsRepository,
             IPacketFormatter packetFormatter)
-            : base(source, sessionsRepository, packetFormatter, Operation.Invite, Status.Accept, destinationId)
+            : base(source, sessionsRepository, packetFormatter, Operation.Invite, Status.Accept)
         {
             _destinationId = destinationId;
         }
@@ -20,11 +20,6 @@ namespace TCPServer.Models.Commands
             ValidateAndInitializeDestinationId();
             ValidateAndInitializeSessionIds();
             
-        }
-
-        protected override void SetPacketFields()
-        {
-            Packet.SetSourceId(Source.Id);
         }
 
         private void ValidateAndInitializeDestinationId()
@@ -60,6 +55,11 @@ namespace TCPServer.Models.Commands
             SessionsRepository.UpdateClientSessionId(Source, DestinationSessionId);
         }
 
+        protected override void SetPacketFields()
+        {
+            Packet.SetSourceId(Source.Id);
+        }
+
         public override void Execute()
         {
             base.Execute();
@@ -67,8 +67,7 @@ namespace TCPServer.Models.Commands
             Destination.RemoveAllPendingInvites();
 
             var sourceNewSessionId = SessionsRepository.GetSessionId(Source);
-            var initialPacket = new Packet(Operation.GetId, Status.Initial, sourceNewSessionId, _destinationId)
-                .SetDestinationId(Source.Id);
+            var initialPacket = new Packet(Operation.GetId, Status.Initial, sourceNewSessionId, Source.Id);
             Source.SendTo(PacketFormatter.Serialize(initialPacket));
         }
     }

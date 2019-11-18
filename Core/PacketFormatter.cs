@@ -46,7 +46,7 @@ namespace Core
                 switch (match.Groups["key"].Value)
                 {
                     case "sid":
-                        packet.SetId(Guid.Parse(match.Groups["value"].Value));
+                        packet.SetSessionId(Guid.Parse(match.Groups["value"].Value));
                         break;
                     case "Operacja":
                         Enum.TryParse(match.Groups["value"].Value, out Operation operation);
@@ -67,7 +67,7 @@ namespace Core
                         packet.SetDestinationId(int.Parse(match.Groups["value"].Value));
                         break;
                     case "Identyfikator":
-                        packet.SetIdent(int.Parse(match.Groups["value"].Value));
+                        packet.SetClientId(int.Parse(match.Groups["value"].Value));
                         break;
                     case "length":
                         break;

@@ -10,8 +10,8 @@ namespace TCPClient.Models.Commands
         private readonly ISender _sender;
         private readonly IPacketFormatter _packetFormatter;
 
-        protected ClientCommand(Guid sessionId, ISender sender, IPacketFormatter packetFormatter,
-            Operation operation, Status status, int identyfikator)
+        protected ClientCommand(int identyfikator, Guid sessionId, ISender sender,
+            IPacketFormatter packetFormatter, Operation operation, Status status)
         {
             _sender = sender;
             _packetFormatter = packetFormatter;

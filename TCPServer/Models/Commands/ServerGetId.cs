@@ -6,7 +6,7 @@ namespace TCPServer.Models.Commands
     public class ServerGetId : ServerCommand
     {
         public ServerGetId(ClientData source, ISessionsRepository sessionsRepository, IPacketFormatter packetFormatter)
-            : base(source, sessionsRepository, packetFormatter, Operation.GetId, Status.Ok, source.Id)
+            : base(source, sessionsRepository, packetFormatter, Operation.GetId, Status.Ok)
         {
         }
 
@@ -20,8 +20,6 @@ namespace TCPServer.Models.Commands
         {
             var otherIdsMessage = SessionsRepository.GetOtherClientsIdsToString(Source);
             Packet.SetMessage(otherIdsMessage);
-
-            Packet.SetDestinationId(Destination.Id);
         }
     }
 }

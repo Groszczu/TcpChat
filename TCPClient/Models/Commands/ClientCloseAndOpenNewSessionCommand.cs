@@ -5,8 +5,8 @@ namespace TCPClient.Models.Commands
 {
     public class ClientCloseAndOpenNewSessionCommand : ClientCommand
     {
-        public ClientCloseAndOpenNewSessionCommand(Guid sessionId, ISender sender, IPacketFormatter packetFormatter, int ident)
-            : base(sessionId, sender, packetFormatter, Operation.CloseSession, Status.Ok, ident)
+        public ClientCloseAndOpenNewSessionCommand(int ident, Guid sessionId, ISender sender, IPacketFormatter packetFormatter)
+            : base(ident, sessionId, sender, packetFormatter, Operation.CloseSession, Status.Ok)
         {
         }
     }

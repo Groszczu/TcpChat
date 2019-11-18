@@ -8,7 +8,7 @@ namespace TCPServer.Models.Commands
     {
         public ServerCloseAndOpenNewSessionCommand(ClientData source, ISessionsRepository sessionsRepository,
             IPacketFormatter packetFormatter) 
-            : base(source, sessionsRepository, packetFormatter, Operation.CloseSession, Status.Ok, source.Id)
+            : base(source, sessionsRepository, packetFormatter, Operation.CloseSession, Status.Ok)
         {
         }
 
@@ -25,7 +25,5 @@ namespace TCPServer.Models.Commands
             SessionsRepository.UpdateClientSessionId(Destination, Guid.NewGuid());
             DestinationSessionId = SessionsRepository.GetSessionId(Destination);
         }
-        
-        
     }
 }

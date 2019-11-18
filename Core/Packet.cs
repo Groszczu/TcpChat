@@ -8,18 +8,19 @@ namespace Core
     {
         public const int MaximumPacketSize = 2048;
 
-        public HeaderProperty<Guid> Id { get; private set; }
+        public HeaderProperty<int> ClientId { get; private set; }
         public HeaderProperty<Operation> Operation { get; private set; }
         public HeaderProperty<Status> Status { get; private set; }
         public HeaderProperty<Timestamp> Timestamp { get; set; }
+        public HeaderProperty<Guid> SessionId { get; private set; }
         public HeaderProperty<int> SourceId { get; private set; }
         public HeaderProperty<int> DestinationId { get; private set; }
         public HeaderProperty<string> Message { get; private set; }
 
-        public HeaderProperty<int> Ident { get; private set; }
         public Packet()
         {
-            Id = new HeaderProperty<Guid>();
+            ClientId = new HeaderProperty<int>();
+            SessionId = new HeaderProperty<Guid>();
             Status = new HeaderProperty<Status>();
             Timestamp = new HeaderProperty<Timestamp>();
             SourceId = new HeaderProperty<int>();
@@ -27,16 +28,16 @@ namespace Core
             Message = new HeaderProperty<string>();
         }
 
-        public Packet(Operation operation, Status status, Guid id, int ident, Timestamp timestamp = null)
+        public Packet(Operation operation, Status status, Guid sessionId, int clientId, Timestamp timestamp = null)
         {
-            SetId(id);
             SetOperation(operation);
             SetStatus(status);
+            SetClientId(clientId);
+            SetSessionId(sessionId);
             if (timestamp == null)
                 timestamp = new Timestamp(DateTime.UtcNow);
             SetTimestamp(timestamp);
-            SetIdent(ident);
-            
+
 
             DestinationId = new HeaderProperty<int>();
             SourceId = new HeaderProperty<int>();
@@ -48,24 +49,17 @@ namespace Core
             return GetType().GetProperties()
                 .Where(p => ((IHeaderProperty) p.GetValue(this, null)).IsSet)
                 .Select(pi => pi.GetValue(this, null) as IHeaderProperty);
-//            var setProperties = new HashSet<IHeaderProperty>();
-//
-//            foreach (var propertyInfo in allProperties)
-//            {
-//                var propValue = (IHeaderProperty) propertyInfo.GetValue(this, null);
-//                var isSet = propValue.IsSet;
-//                if (isSet)
-//                {
-//                    setProperties.Add(propValue);
-//                }
-//            }
-//
-//            return setProperties;
         }
 
-        public Packet SetId(Guid id)
+        public Packet SetClientId(int clientId)
         {
-            Id = new HeaderProperty<Guid>(id, "sid", true);
+            ClientId = new HeaderProperty<int>(clientId, "Identyfikator", true);
+            return this;
+        }
+
+        public Packet SetSessionId(Guid id)
+        {
+            SessionId = new HeaderProperty<Guid>(id, "sid", true);
             return this;
         }
 
@@ -92,7 +86,7 @@ namespace Core
             SourceId = new HeaderProperty<int>(sourceId, "source", true);
             return this;
         }
-        
+
         public Packet SetDestinationId(int destinationId)
         {
             DestinationId = new HeaderProperty<int>(destinationId, "destination", true);
@@ -111,13 +105,6 @@ namespace Core
         private static void RemoveForbiddenSigns(ref string message)
         {
             message = message.Replace("|", "");
-        }
-
-        public Packet SetIdent(int ident)
-        {
-            
-            DestinationId = new HeaderProperty<int>(ident, "Identyfikator", true);
-            return this;
         }
     }
 }

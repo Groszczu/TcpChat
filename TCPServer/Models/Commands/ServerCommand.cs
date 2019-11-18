@@ -16,17 +16,15 @@ namespace TCPServer.Models.Commands
         
         private readonly Operation _operation;
         private readonly Status _status;
-        private int _ident;
 
         protected ServerCommand(ClientData source, ISessionsRepository sessionsRepository, IPacketFormatter packetFormatter,
-            Operation operation, Status status, int ident)
+            Operation operation, Status status)
         {
             Source = source;
             SessionsRepository = sessionsRepository;
             PacketFormatter = packetFormatter;
             _operation = operation;
             _status = status;
-            _ident = ident;
         }
 
         protected abstract void ValidateAndInitializeCommandArguments();
@@ -36,7 +34,7 @@ namespace TCPServer.Models.Commands
         public virtual void Execute()
         {
             ValidateAndInitializeCommandArguments();
-            Packet = new Packet(_operation, _status, DestinationSessionId, ident: _ident);
+            Packet = new Packet(_operation, _status, DestinationSessionId,  Destination.Id);
             SetPacketFields();
             
             var serializedPacket = PacketFormatter.Serialize(Packet);

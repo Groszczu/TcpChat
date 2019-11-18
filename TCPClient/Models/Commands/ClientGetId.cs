@@ -5,8 +5,8 @@ namespace TCPClient.Models.Commands
 {
     public class ClientGetId : ClientCommand
     {
-        public ClientGetId(Guid sessionId, ISender sender, IPacketFormatter packetFormatter, int ident)
-            : base(sessionId, sender, packetFormatter, Operation.GetId, Status.Ok, ident)
+        public ClientGetId(int ident, Guid sessionId, ISender sender, IPacketFormatter packetFormatter)
+            : base(ident, sessionId, sender, packetFormatter, Operation.GetId, Status.Ok)
         {
         }
     }

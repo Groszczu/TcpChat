@@ -222,7 +222,7 @@ namespace TCPServer
                             _ => (ICommand) null
                         }),
                         Operation.Message => new ServerSendMessage(source, _sessionsRepository, _packetFormatter,
-                            data.Message.Value, _sessionsRepository.GetSessionId(source)),
+                            data.Message.Value),
                         Operation.CloseSession => new ServerCloseAndOpenNewSessionCommand(source, _sessionsRepository,
                             _packetFormatter),
                         Operation.Disconnect => new ServerDisconnect(source, _sessionsRepository, _packetFormatter),

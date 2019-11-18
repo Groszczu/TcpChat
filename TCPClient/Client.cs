@@ -63,7 +63,7 @@ namespace TCPClient
             {
                 if (_client.Connected)
                 {
-                    command = new ClientDisconnect(_sessionId, _byteSender, _packetFormatter, _id);
+                    command = new ClientDisconnect(_id, _sessionId, _byteSender, _packetFormatter);
                     _quiting = true;
                 }
                 else
@@ -82,38 +82,38 @@ namespace TCPClient
             switch (tag)
             {
                 case var input when IdTagValidator.Validate(input):
-                    command = new ClientGetId(_sessionId, _byteSender, _packetFormatter, _id);
+                    command = new ClientGetId(_id, _sessionId, _byteSender, _packetFormatter);
                     break;
 
                 case var input when InviteTagValidator.Validate(input):
                     destinationId = int.Parse(InviteTagValidator.GetMatchedValue(tag));
-                    command = new ClientInvite(destinationId, _sessionId, _byteSender,
-                        _packetFormatter, _id);
+                    command = new ClientInvite(_id, destinationId, _sessionId,
+                        _byteSender, _packetFormatter);
                     break;
 
                 case var input when AcceptTagValidator.Validate(input):
                     destinationId = int.Parse(AcceptTagValidator.GetMatchedValue(tag));
-                    command = new ClientAcceptInvite(destinationId, _sessionId, _byteSender,
-                        _packetFormatter, _id);
+                    command = new ClientAcceptInvite(_id, destinationId, _sessionId,
+                        _byteSender, _packetFormatter);
                     break;
 
                 case var input when DeclineTagValidator.Validate(input):
                     destinationId = int.Parse(DeclineTagValidator.GetMatchedValue(tag));
-                    command = new ClientDeclineInvite(destinationId, _sessionId, _byteSender,
-                        _packetFormatter, _id);
+                    command = new ClientDeclineInvite(_id, destinationId, _sessionId,
+                        _byteSender, _packetFormatter);
                     break;
 
                 case var input when MessageTagValidator.Validate(input):
                     var messageToSend = MessageTagValidator.GetMatchedValue(tag);
-                    command = new ClientSendMessage(_sessionId, _byteSender, _packetFormatter, messageToSend, _id);
+                    command = new ClientSendMessage(_id, _sessionId, _byteSender, _packetFormatter, messageToSend);
                     break;
 
                 case var input when CloseTagValidator.Validate(input):
-                    command = new ClientCloseAndOpenNewSessionCommand(_sessionId, _byteSender, _packetFormatter, _id);
+                    command = new ClientCloseAndOpenNewSessionCommand(_id, _sessionId, _byteSender, _packetFormatter);
                     break;
 
                 case var input when DisconnectTagValidator.Validate(input):
-                    command = new ClientDisconnect(_sessionId, _byteSender, _packetFormatter, _id);
+                    command = new ClientDisconnect(_id, _sessionId, _byteSender, _packetFormatter);
                     break;
             }
 
@@ -211,7 +211,7 @@ namespace TCPClient
                 switch (data.Operation.Value)
                 {
                     case Operation.GetId:
-                        UpdateSessionAndClientIds(data.Id.Value, data.DestinationId.Value);
+                        UpdateSessionAndClientIds(data.SessionId.Value, data.ClientId.Value);
                         messageToPrint.Append($"Your ID: {_id}, your session ID: '{_sessionId}'");
 
                         if (data.Status.Value == Status.Initial)
@@ -244,7 +244,7 @@ namespace TCPClient
                         messageToPrint.Append($"Client {data.SourceId.Value}: ").Append(data.Message.Value);
                         break;
                     case Operation.CloseSession:
-                        _sessionId = data.Id.Value;
+                        _sessionId = data.SessionId.Value;
                         messageToPrint.Append("You were moved to the new session.\n")
                             .Append($"Your new session ID: {_sessionId}");
                         break;
