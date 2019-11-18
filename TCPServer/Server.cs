@@ -150,8 +150,7 @@ namespace TCPServer
             lock (_lock)
                 sessionId = _sessionsRepository.GetSessionId(clientData);
 
-            var initialPacket = new Packet(Operation.GetId, Status.Initial, sessionId, clientData.Id)
-                .SetDestinationId(clientData.Id);
+            var initialPacket = new Packet(Operation.GetId, Status.Initial, sessionId, clientData.Id);
             clientData.SendTo(_packetFormatter.Serialize(initialPacket));
         }
 
