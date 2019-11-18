@@ -69,8 +69,6 @@ namespace Core
                     case "Identyfikator":
                         packet.SetClientId(int.Parse(match.Groups["value"].Value));
                         break;
-                    case "length":
-                        break;
                     case "message":
                         break;
                     default:

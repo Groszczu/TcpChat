@@ -24,5 +24,20 @@ namespace Core
         {
             return Value.ToString();
         }
+
+        public override bool Equals(object obj)
+        {
+            return obj is Timestamp timestamp && timestamp.Value == Value;
+        }
+
+        protected bool Equals(Timestamp other)
+        {
+            return Value == other.Value;
+        }
+
+        public override int GetHashCode()
+        {
+            return Value;
+        }
     }
 }
