@@ -2,8 +2,6 @@
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 using Core;
 using TCPClient.Models.Commands;
 using TCPClient.Services.TagValidators;
@@ -22,8 +20,6 @@ namespace TCPClient
         private bool _quiting;
 
         private NetworkStream _stream;
-
-        private Thread _receivingThread;
 
         public Client(IPacketFormatter packetFormatter, ICommandHandler commandHandler)
         {
@@ -56,6 +52,7 @@ namespace TCPClient
                 var ipAddress = ConnectionTagValidator.GetIpAddress(tag);
                 var portNumber = ConnectionTagValidator.GetPortNumber(tag);
                 TryToConnect(ipAddress, portNumber);
+                StartReceivingIfConnected();
                 return;
             }
 
@@ -143,34 +140,31 @@ namespace TCPClient
                 {
                     Console.WriteLine("Connecting to the server...");
                     _client.Connect(ipAddress, portNumber);
+                    Console.WriteLine("Connected successfully");
                 }
                 catch (SocketException)
                 {
                     Console.WriteLine("Unable to connect");
                 }
             }
+        }
 
+        private void StartReceivingIfConnected()
+        {
             if (_client.Connected)
             {
-                Console.WriteLine("Connected successfully");
                 _stream = _client.GetStream();
                 _byteSender = new ByteSender(_stream);
 
-                _receivingThread = new Thread(async () =>
-                {
-                    Thread.CurrentThread.IsBackground = true;
-                    await HandleReceivingPackets();
-                });
-
-                _receivingThread.Start();
+                HandleReceivingPackets();
             }
             else
             {
-                Console.WriteLine("Failed to connect");
+                Console.WriteLine("Client is not connected");
             }
         }
 
-        private async Task HandleReceivingPackets()
+        private async void HandleReceivingPackets()
         {
             while (true)
             {
@@ -194,7 +188,7 @@ namespace TCPClient
                     _client.Close();
                     if (_quiting)
                         QuitProgram();
-                    
+
                     break;
                 }
 
