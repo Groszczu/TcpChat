@@ -37,6 +37,9 @@ namespace TCPClient
             }
         }
 
+        // Metoda przetwarzająca polecania wprowadzone przez użytkownika.
+        // Wykorzystuje metody statyczne sprawdzające czy wpisane polecenie jest poprawne.
+        // W przypadku sukcesu wykonuje odpowiednią operację
         private void ProcessTag(string tag)
         {
             ClientCommand command = null;
@@ -69,12 +72,15 @@ namespace TCPClient
                 }
             }
 
+            // Jeżeli klient nie jest podłączony z serwerem metoda ta kończy się, ponieważ operacje poniżej wymagają
+            // połączenia z serwerem do ich realizacji
             if (!_client.Connected)
             {
                 PrintInvalidInputOrConnectionRequiredMessage();
                 return;
             }
 
+            // Operacje wymagające połączenia z serwerem
             int destinationId;
             switch (tag)
             {
@@ -124,6 +130,7 @@ namespace TCPClient
             }
         }
 
+        // Metoda próbująca połączyć się z serwerem maksymalnie podaną liczbę razy
         private void TryToConnect(IPAddress ipAddress, int portNumber, int maxAttempts = 3)
         {
             if (_client.Connected)
@@ -164,6 +171,7 @@ namespace TCPClient
             }
         }
 
+        // Metoda odbierająca pakiety od serwera
         private async void HandleReceivingPackets()
         {
             while (true)
@@ -181,7 +189,7 @@ namespace TCPClient
                     break;
                 }
 
-                // server closed client's stream
+                // Strumień zosał zamknięty przez serwer
                 if (receivedPacket == null)
                 {
                     _client.Client.Shutdown(SocketShutdown.Both);
@@ -196,6 +204,9 @@ namespace TCPClient
             }
         }
 
+        // Metoda okraślająca rodzaj pakietu, czyli odczytująca pola operacji oraz statusu.
+        // W zależności od otrzymanego pakietu wykonana zosaje odpowiednia operacja oraz wyświtlona odpowiednia
+        // wiadomość na konsoli
         private void ProcessPacket(Packet data)
         {
             var messageToPrint = new StringBuilder();

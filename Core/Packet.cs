@@ -4,6 +4,7 @@ using System.Linq;
 
 namespace Core
 {
+    // Klasa przedstawiająca pojedynczy pakiet danych
     public class Packet
     {
         public const int MaximumPacketSize = 2048;
@@ -44,6 +45,7 @@ namespace Core
             Message = new HeaderProperty<string>();
         }
 
+        // Metoda zwracająca tylko te właściwości, które zostały ustawione w danym pakiecie
         public IEnumerable<IHeaderProperty> GetSetProperties()
         {
             return GetType().GetProperties()

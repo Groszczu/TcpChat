@@ -31,6 +31,7 @@ namespace TCPServer
             _clientIdsRepository = clientIdsRepository;
         }
 
+        // Uruchomienie aplikacji serwera
         public void Run()
         {
             var localIpAddress = TryToGetLocalIpAddress();
@@ -46,6 +47,7 @@ namespace TCPServer
             }
         }
 
+        // Metoda zwracająca lokalny adres IP
         private static IPAddress TryToGetLocalIpAddress()
         {
             IPAddress localIpAddress;
@@ -76,6 +78,7 @@ namespace TCPServer
             throw new Exception("No network adapters with an IPv4 address in the system");
         }
 
+        // Metoda zwracająca numer wolnego portu
         private static int GetFreeTcpPort()
         {
             var listener = new TcpListener(IPAddress.Loopback, 0);
@@ -86,6 +89,7 @@ namespace TCPServer
             return port;
         }
 
+        // Metoda wywołująca inne metody prywatne w zależności od wprowadzonej wartości przez użytkownika
         private void ProcessInput(string tag)
         {
             switch (tag)
@@ -113,6 +117,7 @@ namespace TCPServer
             HandleConnection();
         }
 
+        // Metoda rejetrująca nowych klientów
         private async void HandleConnection()
         {
             while (!_shutDown)
@@ -137,6 +142,7 @@ namespace TCPServer
             }
         }
 
+        // Zarejstrowanie nowego klienta do repozytorium
         private ClientData CreateAndRegisterNewClientData(TcpClient clientSocket)
         {
             var newClientId = _clientIdsRepository.NewClientId();
@@ -148,6 +154,7 @@ namespace TCPServer
             return newClientData;
         }
 
+        // Wysłanie pakietu inicjalnego
         private void SendInitialPacket(ClientData clientData)
         {
             Guid sessionId;
@@ -158,6 +165,7 @@ namespace TCPServer
             clientData.SendTo(_packetFormatter.Serialize(initialPacket));
         }
 
+        // Metoda odbierająca pakiety od danego klienta
         private async void HandleReceivingFromClient(ClientData client)
         {
             var stream = client.Socket.GetStream();
@@ -182,6 +190,7 @@ namespace TCPServer
                     break;
                 }
 
+                // Klient rozłączył się bez wcześniejszego wysłania pakietu kończącego
                 if (receivedPacket == null)
                 {
                     Console.WriteLine($"Connection with client {client.Id} was forcibly closed");
@@ -193,6 +202,7 @@ namespace TCPServer
             }
         }
 
+        // Metoda zamykająca strumień przesyłania danych
         private void EndConnection(ClientData client)
         {
             lock (_lock)
@@ -202,10 +212,13 @@ namespace TCPServer
             client.Socket.Close();
         }
 
+        // Metoda okraślająca rodzaj pakietu, czyli odczytująca pola operacji, statusu
+        // W zależności od otrzymanego pakietu wykonana zosaje odpowiednia operacja
         private void ProcessPacket(ClientData source, Packet data)
         {
             try
             {
+                // określenie jaka operacja ma zostać wykonana
                 ServerCommand command;
                 lock (_lock)
                     command = data.Operation.Value switch
@@ -234,6 +247,8 @@ namespace TCPServer
             }
             catch (InvalidOperationException exception)
             {
+                // Jeżeli został rzucowny wyjątek (InvalidOperationException) to na konsoli zostaje wyświetlona wiadomość
+                // o rodzaju błędu, po czym do klienta wysłany zostaje pakiet informujący o błędie
                 Console.WriteLine($"Error caused by client {source.Id}: \"{exception.Message}\"");
                 Guid sourceSessionId;
                 lock (_lock)
